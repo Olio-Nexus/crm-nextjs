@@ -17,6 +17,10 @@ const RESEND_API_KEY = process.env.RESEND_API_KEY;
 /** Verified sender used by both transports (e.g. "Plattera <no-reply@plattera.in>"). */
 const MAIL_FROM = SMTP_FROM ?? SMTP_USER ?? "Plattera <onboarding@resend.dev>";
 
+/** Replies are routed to a no-reply address — the client doesn't want customers
+ *  replying to system emails. Override with MAIL_REPLY_TO if needed. */
+const MAIL_REPLY_TO = process.env.MAIL_REPLY_TO ?? "no-reply@plattera.in";
+
 export const resendConfigured = Boolean(RESEND_API_KEY);
 export const smtpConfigured = Boolean(
   SMTP_HOST && SMTP_PORT && SMTP_USER && SMTP_PASS,
@@ -96,7 +100,7 @@ async function sendViaResend({ to, subject, text, html }: MailInput) {
       Authorization: `Bearer ${RESEND_API_KEY}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ from: MAIL_FROM, to: [to], subject, text, html: html ?? undefined }),
+    body: JSON.stringify({ from: MAIL_FROM, to: [to], reply_to: MAIL_REPLY_TO, subject, text, html: html ?? undefined }),
   });
   if (!res.ok) {
     const detail = await res.text().catch(() => "");
@@ -130,6 +134,7 @@ export async function sendMail({ to, subject, text, html }: MailInput) {
 
   await transporter.sendMail({
     from: MAIL_FROM,
+    replyTo: MAIL_REPLY_TO,
     to,
     subject,
     text,
@@ -142,7 +147,7 @@ export async function sendMail({ to, subject, text, html }: MailInput) {
 export function otpEmail(code: string) {
   return {
     subject: `${code} is your Plattera verification code`,
-    text: `Your Plattera verification code is ${code}. It expires in 10 minutes. If you didn't request this, you can ignore this email.`,
+    text: `Your Plattera verification code is ${code}. It expires in 10 minutes. If you didn't request this, you can ignore this email.\n\nThis is an automated message — please do not reply.`,
     html: `
       <div style="font-family:Arial,Helvetica,sans-serif;max-width:480px;margin:0 auto;padding:24px">
         <h2 style="color:#295A4F;margin:0 0 8px">Verify your email</h2>
@@ -152,6 +157,9 @@ export function otpEmail(code: string) {
         </div>
         <p style="color:#777;font-size:13px;margin:24px 0 0">
           This code expires in 10 minutes. If you didn't request it, you can safely ignore this email.
+        </p>
+        <p style="color:#999;font-size:12px;margin:16px 0 0">
+          This is an automated message — please do not reply to this email.
         </p>
       </div>
     `,
