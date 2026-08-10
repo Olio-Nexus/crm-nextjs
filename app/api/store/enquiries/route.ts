@@ -6,7 +6,7 @@ import { storeJson, handleOptions } from "@/lib/store";
 export const OPTIONS = handleOptions;
 
 const schema = z.object({
-  type: z.enum(["contact", "newsletter", "quote", "vendor"]),
+  type: z.enum(["contact", "newsletter", "quote", "vendor", "brochure"]),
   name: z.string().optional(),
   email: z.string().email().optional(),
   phone: z.string().optional(),
