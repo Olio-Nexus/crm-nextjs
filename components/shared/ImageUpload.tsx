@@ -8,19 +8,24 @@ const ALLOWED = ["image/png", "image/jpeg", "image/webp"];
 
 /**
  * Admin image picker → uploads to R2 via POST /api/uploads (same-origin, so the
- * NextAuth session cookie authorizes it) and returns the public URL through
+ * NextAuth session cookie authorizes it) and returns each public URL through
  * `onUploaded`. Validates type + size on the client for a fast, clear error;
  * the server enforces its own limits regardless.
+ *
+ * With `multiple`, several files can be picked at once — they upload one by one
+ * and `onUploaded` fires per successful file (so callers can append each URL).
  */
 export function ImageUpload({
   folder = "products",
   maxBytes = DEFAULT_MAX_BYTES,
   label = "Upload image",
+  multiple = false,
   onUploaded,
 }: {
   folder?: string;
   maxBytes?: number;
   label?: string;
+  multiple?: boolean;
   onUploaded: (url: string) => void;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
@@ -29,35 +34,37 @@ export function ImageUpload({
 
   const maxMb = Math.round(maxBytes / (1024 * 1024));
 
-  async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    e.target.value = ""; // let the same file be re-picked after an error
-    if (!file) return;
+  async function handleFiles(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? []);
+    e.target.value = ""; // let the same file(s) be re-picked after an error
+    if (!files.length) return;
 
     setError(null);
-    if (!ALLOWED.includes(file.type)) {
-      setError("Use a PNG, JPG or WEBP image.");
-      return;
-    }
-    if (file.size > maxBytes) {
-      setError(`Image is too large (max ${maxMb} MB).`);
-      return;
-    }
-
     setBusy(true);
-    try {
-      const fd = new FormData();
-      fd.append("file", file);
-      fd.append("folder", folder);
-      const res = await fetch("/api/uploads", { method: "POST", body: fd });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || "Upload failed.");
-      onUploaded(data.url as string);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Upload failed.");
-    } finally {
-      setBusy(false);
+    const errors: string[] = [];
+    for (const file of files) {
+      if (!ALLOWED.includes(file.type)) {
+        errors.push(`${file.name}: use PNG, JPG or WEBP`);
+        continue;
+      }
+      if (file.size > maxBytes) {
+        errors.push(`${file.name}: too large (max ${maxMb} MB)`);
+        continue;
+      }
+      try {
+        const fd = new FormData();
+        fd.append("file", file);
+        fd.append("folder", folder);
+        const res = await fetch("/api/uploads", { method: "POST", body: fd });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || "Upload failed.");
+        onUploaded(data.url as string);
+      } catch (err) {
+        errors.push(`${file.name}: ${err instanceof Error ? err.message : "upload failed"}`);
+      }
     }
+    if (errors.length) setError(errors.join(" · "));
+    setBusy(false);
   }
 
   return (
@@ -79,8 +86,9 @@ export function ImageUpload({
         ref={inputRef}
         type="file"
         accept="image/png,image/jpeg,image/webp"
+        multiple={multiple}
         className="hidden"
-        onChange={handleFile}
+        onChange={handleFiles}
       />
       {error && <p className="mt-1 text-xs text-red-500">{error}</p>}
     </div>

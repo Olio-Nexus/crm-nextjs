@@ -45,7 +45,11 @@ export default function ProductForm({ initial = {}, mode }: Props) {
   const [serverError,      setServerError]      = useState("");
   const [categories,       setCategories]       = useState<any[]>([]);
   const [subcategories,    setSubcategories]    = useState<any[]>([]);
-  const [selectedCategory, setSelectedCategory] = useState("");
+  // On edit, seed from the product's parent category so the category dropdown
+  // shows the saved value and the subcategory list loads + pre-selects.
+  const [selectedCategory, setSelectedCategory] = useState(
+    initial.subcategory?.categoryId?.toString() ?? "",
+  );
   const [touched,          setTouched]          = useState<Record<string, boolean>>({});
   const [errors,           setErrors]           = useState<ValidationErrors<any>>({});
   const [varTouched,       setVarTouched]       = useState<Record<string, boolean>[]>([{}]);
@@ -365,7 +369,8 @@ export default function ProductForm({ initial = {}, mode }: Props) {
             <div className="mt-2 flex flex-wrap items-center gap-3">
               <ImageUpload
                 folder="products"
-                label="Upload image"
+                label="Upload images"
+                multiple
                 onUploaded={(url) =>
                   setForm((f) => ({
                     ...f,

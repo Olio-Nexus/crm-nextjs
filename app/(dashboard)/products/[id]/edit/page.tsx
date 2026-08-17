@@ -8,6 +8,9 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
     where: { id: parseInt(id) },
     include: {
       variations: { orderBy: { orderSort: "asc" } },
+      // Parent category id, so the form can pre-select the category dropdown
+      // (and thus load + pre-select the right subcategory) on edit.
+      subcategory: { select: { categoryId: true } },
     },
   });
   if (!product) notFound();
