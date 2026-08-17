@@ -33,7 +33,9 @@ const FORM_RULES = {
 
 const VAR_RULES = {
   sku:   { required: true, message: "SKU is required" },
-  price: { required: true, min: 0.01, message: "Price must be greater than 0" },
+  // Optional: some products aren't priced yet. Blank is stored as 0, which the
+  // storefront shows as "Request a Quote". A price, if given, can't be negative.
+  price: { min: 0, message: "Price can't be negative" },
   stock: { required: true, min: 0,    message: "Stock must be 0 or more" },
 };
 
@@ -477,12 +479,12 @@ export default function ProductForm({ initial = {}, mode }: Props) {
                   {vt(i, "sku") && ve(i, "sku") && <p className="text-xs text-red-500 mt-0.5">⚠ {ve(i, "sku")}</p>}
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1">Price (₹) <span className="text-red-500">*</span></label>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">Price (₹)</label>
                   <input type="number" value={v.price}
                     onChange={(e) => handleVariationChange(i, "price", e.target.value)}
                     onBlur={() => handleVariationBlur(i, "price")}
                     className={inputClass(ve(i, "price"), vt(i, "price"))}
-                    placeholder="999" />
+                    placeholder="Leave blank = Request a Quote" />
                   {vt(i, "price") && ve(i, "price") && <p className="text-xs text-red-500 mt-0.5">⚠ {ve(i, "price")}</p>}
                 </div>
                 <div>

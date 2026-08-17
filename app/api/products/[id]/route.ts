@@ -103,7 +103,8 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
             ? {
                 create: variations.map((v: any, i: number) => ({
                   sku: v.sku,
-                  price: parseFloat(v.price),
+                  // Blank price → 0 (storefront shows "Request a Quote").
+                  price: v.price !== "" && v.price != null ? parseFloat(v.price) : 0,
                   specialPrice: v.specialPrice ? parseFloat(v.specialPrice) : null,
                   stock: parseInt(v.stock),
                   variationImage: v.variationImage ?? null,
