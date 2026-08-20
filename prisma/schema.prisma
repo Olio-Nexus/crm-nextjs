@@ -233,6 +233,21 @@ model StoreEnquiry {
   @@map("store_enquiries")
 }
 
+/** Job applications submitted from the storefront Careers page. */
+model CareerApplication {
+  id        Int      @id @default(autoincrement())
+  name      String
+  email     String
+  phone     String
+  role      String?
+  resumeUrl String?
+  message   String?
+  status    String   @default("new")
+  createdAt DateTime @default(now())
+
+  @@map("career_applications")
+}
+
 /**
  * Blog posts authored in the admin and shown on the storefront.
  * status: "published" appears on the site; "draft" is hidden. `content` is the

@@ -25,19 +25,25 @@ export async function POST(req: NextRequest) {
     const form = await req.formData();
     const file = form.get("file");
     const purpose = form.get("purpose")?.toString() ?? "personalization";
-    const folder = purpose === "vendor" ? "vendor" : "personalization";
+    const folder =
+      purpose === "vendor"
+        ? "vendor"
+        : purpose === "careers"
+          ? "careers"
+          : "personalization";
+    // Vendor proposals and career resumes may be PDFs; personalization is images.
+    const allowPdf = folder === "vendor" || folder === "careers";
 
     if (!(file instanceof File))
       return storeJson({ error: "No file provided" }, 400);
     if (file.size > MAX_UPLOAD_BYTES)
       return storeJson({ error: "File too large (max 10 MB)" }, 413);
-    if (!isAllowedType(file.type, folder === "vendor"))
+    if (!isAllowedType(file.type, allowPdf))
       return storeJson(
         {
-          error:
-            folder === "vendor"
-              ? "Unsupported file type (PDF, PNG, JPG or WEBP)"
-              : "Unsupported file type (PNG, JPG, WEBP or GIF)",
+          error: allowPdf
+            ? "Unsupported file type (PDF, PNG, JPG or WEBP)"
+            : "Unsupported file type (PNG, JPG, WEBP or GIF)",
         },
         415,
       );
@@ -61,7 +67,11 @@ export async function DELETE(req: NextRequest) {
     const { url } = (await req.json().catch(() => ({}))) as { url?: string };
     const key = url ? keyFromUrl(url) : null;
     if (!key) return storeJson({ error: "Invalid file URL" }, 400);
-    if (!key.startsWith("personalization/") && !key.startsWith("vendor/"))
+    if (
+      !key.startsWith("personalization/") &&
+      !key.startsWith("vendor/") &&
+      !key.startsWith("careers/")
+    )
       return storeJson({ error: "Not allowed" }, 403);
     await deleteFromR2(key);
     return storeJson({ ok: true });
