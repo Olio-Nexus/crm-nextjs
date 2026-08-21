@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Plus, Trash2, Pencil, Image, Check, X, ChevronUp, ChevronDown } from "lucide-react";
 import { ImageUpload } from "@/components/shared/ImageUpload";
 
@@ -36,8 +36,15 @@ export default function BannersPage() {
   const [deleting,   setDeleting]   = useState<number | null>(null);
   const [reordering, setReordering] = useState(false);
   const [form, setForm] = useState(EMPTY);
+  const formRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => { load(); }, []);
+
+  // The form renders above the list — scroll it into view when it opens so an
+  // edit click on a card lower down doesn't look like nothing happened.
+  useEffect(() => {
+    if (showForm) formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [showForm]);
 
   async function load() {
     setLoading(true);
@@ -67,8 +74,12 @@ export default function BannersPage() {
     setSaving(true);
     const url    = editing ? `/api/banners/${editing.id}` : "/api/banners";
     const method = editing ? "PUT" : "POST";
-    await fetch(url, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(form) });
+    const res = await fetch(url, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(form) });
     setSaving(false);
+    if (!res.ok) {
+      alert("Couldn't save the banner. Please try again.");
+      return;
+    }
     setShowForm(false);
     load();
   }
@@ -122,7 +133,7 @@ export default function BannersPage() {
 
       {/* Form */}
       {showForm && (
-        <div className="bg-surface border border-gray-200 rounded-2xl p-6 mb-5 space-y-4">
+        <div ref={formRef} className="bg-surface border-2 border-brand-500 rounded-2xl p-6 mb-5 space-y-4 scroll-mt-4">
           <h2 className="font-semibold text-gray-900">{editing ? "Edit Banner" : "New Banner"}</h2>
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-1.5">Banner Image URL *</label>
@@ -215,7 +226,7 @@ export default function BannersPage() {
                             <Image size={32} className="text-gray-300" />
                           </div>
                         )}
-                        <span className="absolute top-2 left-2 bg-white/90 text-gray-900 text-xs font-bold px-2 py-1 rounded-lg shadow-sm">
+                        <span className="absolute top-2 left-2 z-10 bg-brand-600 text-white text-xs font-bold px-2.5 py-1 rounded-lg shadow-md ring-1 ring-white/40">
                           #{i + 1}
                         </span>
                         <div className="absolute inset-0 bg-black/30 flex flex-col justify-end p-4">
