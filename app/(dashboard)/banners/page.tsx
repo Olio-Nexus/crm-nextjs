@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, Trash2, Pencil, Image, Check, X } from "lucide-react";
+import { Plus, Trash2, Pencil, Image, Check, X, ChevronUp, ChevronDown } from "lucide-react";
 import { ImageUpload } from "@/components/shared/ImageUpload";
 
 interface Banner {
@@ -13,19 +13,28 @@ interface Banner {
   btnLink?: string;
   mode?: string;
   status?: boolean;
+  sortOrder?: number;
 }
 
 const EMPTY = { bannerImg: "", title: "", description: "", btnText: "", btnLink: "", mode: "both", status: true };
 
 const INPUT = "w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500";
 
+/** Display groups; banners are ordered within each group by sortOrder. */
+const MODE_GROUPS: { key: string; label: string }[] = [
+  { key: "corporate", label: "Corporate Banners" },
+  { key: "personal", label: "Personal Banners" },
+  { key: "both", label: "Both (Corporate & Personal)" },
+];
+
 export default function BannersPage() {
-  const [banners,   setBanners]   = useState<Banner[]>([]);
-  const [loading,   setLoading]   = useState(true);
-  const [showForm,  setShowForm]  = useState(false);
-  const [editing,   setEditing]   = useState<Banner | null>(null);
-  const [saving,    setSaving]    = useState(false);
-  const [deleting,  setDeleting]  = useState<number | null>(null);
+  const [banners,    setBanners]    = useState<Banner[]>([]);
+  const [loading,    setLoading]    = useState(true);
+  const [showForm,   setShowForm]   = useState(false);
+  const [editing,    setEditing]    = useState<Banner | null>(null);
+  const [saving,     setSaving]     = useState(false);
+  const [deleting,   setDeleting]   = useState<number | null>(null);
+  const [reordering, setReordering] = useState(false);
   const [form, setForm] = useState(EMPTY);
 
   useEffect(() => { load(); }, []);
@@ -72,12 +81,38 @@ export default function BannersPage() {
     setDeleting(null);
   }
 
+  /** Move a banner up/down within its own mode group and persist the new order. */
+  async function move(b: Banner, dir: -1 | 1) {
+    const mode = b.mode || "both";
+    const group = banners.filter((x) => (x.mode || "both") === mode);
+    const idx = group.findIndex((x) => x.id === b.id);
+    const j = idx + dir;
+    if (j < 0 || j >= group.length) return;
+    const arr = [...group];
+    [arr[idx], arr[j]] = [arr[j], arr[idx]];
+    setReordering(true);
+    // Reassign a clean 0..n-1 order for the whole group.
+    await Promise.all(
+      arr.map((x, i) =>
+        fetch(`/api/banners/${x.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ sortOrder: i }),
+        }),
+      ),
+    );
+    setReordering(false);
+    load();
+  }
+
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-xl font-semibold text-gray-900">Home Banners</h1>
-          <p className="text-sm text-gray-500 mt-0.5">{banners.length} banners configured</p>
+          <p className="text-sm text-gray-500 mt-0.5">
+            {banners.length} banners — use the arrows to set the order within each group
+          </p>
         </div>
         <button onClick={openCreate}
           className="inline-flex items-center gap-2 px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold rounded-xl transition-colors">
@@ -150,7 +185,7 @@ export default function BannersPage() {
         </div>
       )}
 
-      {/* Banners Grid */}
+      {/* Banners grouped by mode, ordered by sortOrder */}
       {loading ? (
         <div className="py-16 text-center text-gray-400">Loading...</div>
       ) : banners.length === 0 ? (
@@ -159,42 +194,75 @@ export default function BannersPage() {
           <p className="text-sm text-gray-400">No banners yet — click Add Banner to create one</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {banners.map((b) => (
-            <div key={b.id} className="bg-surface border border-gray-200 rounded-2xl overflow-hidden">
-              {/* Preview */}
-              <div className="relative h-40 bg-gradient-to-br from-gray-100 to-gray-200 overflow-hidden">
-                {b.bannerImg ? (
-                  <img src={b.bannerImg} alt={b.title} className="w-full h-full object-cover" />
-                ) : (
-                  <div className="flex items-center justify-center h-full">
-                    <Image size={32} className="text-gray-300" />
-                  </div>
-                )}
-                <div className="absolute inset-0 bg-black/30 flex flex-col justify-end p-4">
-                  <p className="text-white font-bold text-lg leading-tight">{b.title}</p>
-                  <p className="text-white/80 text-xs mt-0.5 line-clamp-1">{b.description}</p>
-                  <span className="mt-2 inline-block bg-surface text-gray-900 text-xs font-semibold px-3 py-1 rounded-lg self-start">
-                    {b.btnText}
-                  </span>
+        <div className="space-y-8">
+          {MODE_GROUPS.map(({ key, label }) => {
+            const group = banners.filter((b) => (b.mode || "both") === key);
+            if (group.length === 0) return null;
+            return (
+              <section key={key}>
+                <h2 className="text-sm font-semibold text-gray-700 mb-3">
+                  {label} <span className="font-normal text-gray-400">({group.length})</span>
+                </h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {group.map((b, i) => (
+                    <div key={b.id} className="bg-surface border border-gray-200 rounded-2xl overflow-hidden">
+                      {/* Preview */}
+                      <div className="relative h-40 bg-gradient-to-br from-gray-100 to-gray-200 overflow-hidden">
+                        {b.bannerImg ? (
+                          <img src={b.bannerImg} alt={b.title} className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="flex items-center justify-center h-full">
+                            <Image size={32} className="text-gray-300" />
+                          </div>
+                        )}
+                        <span className="absolute top-2 left-2 bg-white/90 text-gray-900 text-xs font-bold px-2 py-1 rounded-lg shadow-sm">
+                          #{i + 1}
+                        </span>
+                        <div className="absolute inset-0 bg-black/30 flex flex-col justify-end p-4">
+                          <p className="text-white font-bold text-lg leading-tight">{b.title}</p>
+                          <p className="text-white/80 text-xs mt-0.5 line-clamp-1">{b.description}</p>
+                          <span className="mt-2 inline-block bg-surface text-gray-900 text-xs font-semibold px-3 py-1 rounded-lg self-start">
+                            {b.btnText}
+                          </span>
+                        </div>
+                      </div>
+                      {/* Actions */}
+                      <div className="flex items-center justify-between px-4 py-3">
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => move(b, -1)}
+                            disabled={i === 0 || reordering}
+                            title="Move up"
+                            className="p-1.5 border border-gray-200 rounded-lg text-gray-500 hover:bg-gray-50 hover:text-brand-600 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                          >
+                            <ChevronUp size={14} />
+                          </button>
+                          <button
+                            onClick={() => move(b, 1)}
+                            disabled={i === group.length - 1 || reordering}
+                            title="Move down"
+                            className="p-1.5 border border-gray-200 rounded-lg text-gray-500 hover:bg-gray-50 hover:text-brand-600 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                          >
+                            <ChevronDown size={14} />
+                          </button>
+                        </div>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <button onClick={() => openEdit(b)}
+                            className="p-1.5 hover:bg-brand-50 rounded-lg text-gray-400 hover:text-brand-600 transition-colors">
+                            <Pencil size={14} />
+                          </button>
+                          <button onClick={() => handleDelete(b.id)} disabled={deleting === b.id}
+                            className="p-1.5 hover:bg-red-50 rounded-lg text-gray-400 hover:text-red-600 transition-colors disabled:opacity-50">
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              </div>
-              {/* Actions */}
-              <div className="flex items-center justify-between px-4 py-3">
-                <p className="text-xs text-gray-400 truncate max-w-[200px] font-mono">{b.bannerImg}</p>
-                <div className="flex items-center gap-1.5 shrink-0">
-                  <button onClick={() => openEdit(b)}
-                    className="p-1.5 hover:bg-brand-50 rounded-lg text-gray-400 hover:text-brand-600 transition-colors">
-                    <Pencil size={14} />
-                  </button>
-                  <button onClick={() => handleDelete(b.id)} disabled={deleting === b.id}
-                    className="p-1.5 hover:bg-red-50 rounded-lg text-gray-400 hover:text-red-600 transition-colors disabled:opacity-50">
-                    <Trash2 size={14} />
-                  </button>
-                </div>
-              </div>
-            </div>
-          ))}
+              </section>
+            );
+          })}
         </div>
       )}
     </div>

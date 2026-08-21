@@ -8,7 +8,7 @@ export async function GET() {
   try {
     const banners = await prisma.homeBanner.findMany({
       where: { status: true },
-      orderBy: { createdAt: "asc" },
+      orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
     });
     return storeJson({
       banners: banners.map((b) => ({
