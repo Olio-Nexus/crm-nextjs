@@ -143,23 +143,40 @@ export async function sendMail({ to, subject, text, html }: MailInput) {
   return { delivered: true as const };
 }
 
-/** Branded OTP email. */
+/** Branded OTP email. A clear from/subject, a real footer with the company's
+ *  name and postal address, and a balanced text+HTML body all help keep the
+ *  message out of spam (thin, code-only emails look phishy to filters). */
 export function otpEmail(code: string) {
   return {
     subject: `${code} is your Plattera verification code`,
-    text: `Your Plattera verification code is ${code}. It expires in 10 minutes. If you didn't request this, you can ignore this email.\n\nThis is an automated message — please do not reply.`,
+    text:
+      `Hi,\n\n` +
+      `Your Plattera verification code is ${code}.\n` +
+      `Enter it on the sign-in screen to continue. This code expires in 10 minutes.\n\n` +
+      `If you didn't request this, you can safely ignore this email — no action is needed.\n\n` +
+      `This is an automated message, please do not reply.\n\n` +
+      `— Plattera Gifts\n` +
+      `Carnival Hub Work Space, Malad East, Mumbai 400097, India\n` +
+      `https://plattera.in`,
     html: `
-      <div style="font-family:Arial,Helvetica,sans-serif;max-width:480px;margin:0 auto;padding:24px">
-        <h2 style="color:#295A4F;margin:0 0 8px">Verify your email</h2>
-        <p style="color:#555;margin:0 0 24px">Use this code to sign in to Plattera.</p>
+      <div style="display:none;max-height:0;overflow:hidden;opacity:0">Your Plattera verification code is ${code}. It expires in 10 minutes.</div>
+      <div style="font-family:Arial,Helvetica,sans-serif;max-width:480px;margin:0 auto;padding:24px;color:#333">
+        <p style="font-size:18px;font-weight:700;color:#295A4F;margin:0 0 20px">Plattera</p>
+        <h2 style="color:#295A4F;font-size:18px;margin:0 0 8px">Verify your email</h2>
+        <p style="color:#555;margin:0 0 20px">Use this one-time code to sign in to your Plattera account.</p>
         <div style="font-size:32px;font-weight:700;letter-spacing:8px;color:#295A4F;background:#f4efe8;padding:16px;text-align:center;border-radius:8px">
           ${code}
         </div>
-        <p style="color:#777;font-size:13px;margin:24px 0 0">
-          This code expires in 10 minutes. If you didn't request it, you can safely ignore this email.
+        <p style="color:#777;font-size:13px;margin:20px 0 0">
+          This code expires in 10 minutes. If you didn't request it, you can safely ignore this email — no action is needed.
         </p>
-        <p style="color:#999;font-size:12px;margin:16px 0 0">
-          This is an automated message — please do not reply to this email.
+        <p style="color:#999;font-size:12px;margin:12px 0 0">
+          This is an automated message, please do not reply.
+        </p>
+        <hr style="border:none;border-top:1px solid #eee;margin:24px 0 12px" />
+        <p style="color:#999;font-size:12px;line-height:1.5;margin:0">
+          Plattera Gifts &middot; Carnival Hub Work Space, Malad East, Mumbai 400097, India<br />
+          <a href="https://plattera.in" style="color:#295A4F;text-decoration:none">plattera.in</a>
         </p>
       </div>
     `,
