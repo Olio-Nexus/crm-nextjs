@@ -56,6 +56,12 @@ export async function GET(req: NextRequest) {
     else if (badge === "new") where.isNew = true;
     else if (badge === "featured") where.isFeatured = true;
 
+    // Trending / Most-Loved products, curated per mode ("corporate"|"personal").
+    const trending = searchParams.get("trending");
+    if (trending === "corporate" || trending === "personal") {
+      where.trendingModes = { has: trending };
+    }
+
     if (minPrice || maxPrice) {
       where.variations = {
         some: {

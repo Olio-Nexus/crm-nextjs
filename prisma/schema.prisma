@@ -176,6 +176,9 @@ model Product {
   giftMode         String?  @default("both") // personal | corporate | both
   occasions        String[]
   recipients       String[]
+  // Modes this product is "trending" in ("corporate"/"personal"), for the
+  // home Most Loved section + the Bestsellers page.
+  trendingModes    String[]
   hamperTier       String?
   rating           Float?
   reviewCount      Int?
