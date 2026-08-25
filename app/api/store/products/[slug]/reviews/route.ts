@@ -29,7 +29,8 @@ export async function GET(
     rating: r.rating,
     title: r.title,
     body: r.body,
-    customerName: r.customer.name,
+    // Admin-added reviews carry a customerName; customer reviews use the account.
+    customerName: r.customerName ?? r.customer?.name ?? "Anonymous",
     createdAt: r.createdAt.toISOString(),
   }));
   const count = reviews.length;

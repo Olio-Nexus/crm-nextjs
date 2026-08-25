@@ -201,21 +201,41 @@ model Product {
 
 /** Storefront product reviews. status: "approved" shows on the site. */
 model Review {
-  id         Int      @id @default(autoincrement())
-  productId  Int
-  customerId Int
-  rating     Int
-  title      String?
-  body       String
-  status     String   @default("approved")
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @default(now()) @updatedAt
+  id           Int      @id @default(autoincrement())
+  productId    Int
+  // Nullable: admin-added reviews carry a customerName instead of a real account.
+  customerId   Int?
+  customerName String?
+  rating       Int
+  title        String?
+  body         String
+  status       String   @default("approved")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @default(now()) @updatedAt
 
-  product  Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
-  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  product  Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  customer Customer? @relation(fields: [customerId], references: [id], onDelete: Cascade)
 
   @@index([productId])
   @@map("reviews")
+}
+
+/** Client testimonials shown on the storefront (CRM-managed). */
+model Testimonial {
+  id        Int      @id @default(autoincrement())
+  name      String
+  role      String?
+  quote     String
+  rating    Int      @default(5)
+  avatar    String?
+  // Which storefront it shows on: "corporate" | "personal" | "both".
+  mode      String   @default("both")
+  status    Boolean  @default(true)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("testimonials")
 }
 
 /** Lead capture from the storefront forms: contact, newsletter, quote, vendor. */
