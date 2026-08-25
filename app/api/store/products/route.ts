@@ -62,6 +62,10 @@ export async function GET(req: NextRequest) {
       where.trendingModes = { has: trending };
     }
 
+    // Filter by an occasion label (e.g. "Personalised", "Diwali").
+    const occasion = searchParams.get("occasion");
+    if (occasion) where.occasions = { has: occasion };
+
     if (minPrice || maxPrice) {
       where.variations = {
         some: {
