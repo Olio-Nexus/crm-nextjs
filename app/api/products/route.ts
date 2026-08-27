@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { prismaErrorResponse } from "@/lib/prisma-error";
+import { revalidateStorefront } from "@/lib/revalidate";
 
 export async function GET(req: NextRequest) {
   try {
@@ -139,6 +140,7 @@ export async function POST(req: NextRequest) {
       include: { variations: true },
     });
 
+    void revalidateStorefront(["products", "categories"]);
     return NextResponse.json(product, { status: 201 });
   } catch (error: any) {
     return prismaErrorResponse(

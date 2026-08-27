@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { revalidateStorefront } from "@/lib/revalidate";
 import { slugify } from "@/lib/utils";
 
 // GET /api/categories/:id
@@ -38,6 +39,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
         hsnCode, gst: gst ? parseInt(gst) : null,
       },
     });
+    void revalidateStorefront(["categories", "products"]);
     return NextResponse.json(category);
   } catch {
     return NextResponse.json({ error: "Failed to update category" }, { status: 500 });
@@ -52,6 +54,7 @@ export async function DELETE(_: NextRequest, { params }: { params: Promise<{ id:
 
     const { id } = await params;
     await prisma.category.delete({ where: { id: parseInt(id) } });
+    void revalidateStorefront(["categories", "products"]);
     return NextResponse.json({ success: true });
   } catch {
     return NextResponse.json({ error: "Failed to delete category" }, { status: 500 });

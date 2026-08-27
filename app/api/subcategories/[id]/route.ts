@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { slugify } from "@/lib/utils";
+import { revalidateStorefront } from "@/lib/revalidate";
 
 export async function GET(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -35,6 +36,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
         metaTitle, metaDescription, metaKeywords, isFeatured, status,
       },
     });
+    void revalidateStorefront(["categories", "products"]);
     return NextResponse.json(sub);
   } catch {
     return NextResponse.json({ error: "Failed to update subcategory" }, { status: 500 });
@@ -48,6 +50,7 @@ export async function DELETE(_: NextRequest, { params }: { params: Promise<{ id:
 
     const { id } = await params;
     await prisma.subCategory.delete({ where: { id: parseInt(id) } });
+    void revalidateStorefront(["categories", "products"]);
     return NextResponse.json({ success: true });
   } catch {
     return NextResponse.json({ error: "Failed to delete subcategory" }, { status: 500 });

@@ -112,8 +112,10 @@ export default function EnquiriesPage() {
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<Enquiry | null>(null);
 
-  const load = useCallback(async () => {
-    setLoading(true);
+  // `silent` skips the loading spinner — used by the background auto-refresh so
+  // the table updates without flashing.
+  const load = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
     const p = new URLSearchParams({ page: String(page), limit: "10" });
     if (search) p.set("search", search);
     if (type) p.set("type", type);
@@ -126,8 +128,14 @@ export default function EnquiriesPage() {
   }, [page, search, type]);
 
   useEffect(() => {
-    const t = setTimeout(load, 300);
+    const t = setTimeout(() => load(), 300);
     return () => clearTimeout(t);
+  }, [load]);
+
+  // Auto-refresh in the background so new leads appear without a manual reload.
+  useEffect(() => {
+    const id = setInterval(() => load(true), 25000);
+    return () => clearInterval(id);
   }, [load]);
 
   // Close the detail popup on Escape.

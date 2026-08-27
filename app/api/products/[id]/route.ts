@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { prismaErrorResponse } from "@/lib/prisma-error";
+import { revalidateStorefront } from "@/lib/revalidate";
 
 export async function GET(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -126,6 +127,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       where: { id: pid },
       include: { variations: { orderBy: { orderSort: "asc" } } },
     });
+    void revalidateStorefront(["products", "categories"]);
     return NextResponse.json(product);
   } catch (error: any) {
     return prismaErrorResponse(
@@ -142,6 +144,7 @@ export async function DELETE(_: NextRequest, { params }: { params: Promise<{ id:
 
     const { id } = await params;
     await prisma.product.delete({ where: { id: parseInt(id) } });
+    void revalidateStorefront(["products", "categories"]);
     return NextResponse.json({ success: true });
   } catch {
     return NextResponse.json({ error: "Failed to delete product" }, { status: 500 });

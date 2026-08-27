@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { slugify } from "@/lib/utils";
+import { revalidateStorefront } from "@/lib/revalidate";
 
 export async function GET(req: NextRequest) {
   try {
@@ -44,6 +45,7 @@ export async function POST(req: NextRequest) {
         status: status ?? false,
       },
     });
+    void revalidateStorefront(["categories", "products"]);
     return NextResponse.json(subcategory, { status: 201 });
   } catch (error: any) {
     if (error.code === "P2002") {
