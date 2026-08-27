@@ -4,10 +4,12 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import {
-  LayoutDashboard, ShoppingBag, Package, Users, Tag,
-  RotateCcw, Shield, BarChart2, Image, Settings,
-  X, UserCog, Layers, RefreshCcw,
-  FileText, CreditCard, Bell, MessageSquare, Inbox, Briefcase, Quote,
+  LayoutDashboard, Package, Users, Tag,
+  BarChart2, Image, Settings,
+  X, UserCog, Layers,
+  FileText, Bell, MessageSquare, Inbox, Briefcase, Quote,
+  // Icons for the payment/order tabs hidden until Razorpay is live (see below):
+  // ShoppingBag, RotateCcw, Shield, RefreshCcw, CreditCard
 } from "lucide-react";
 
 const navGroups = [
@@ -17,16 +19,18 @@ const navGroups = [
       { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
     ],
   },
-  {
-    label: "Order Management",
-    items: [
-      { href: "/orders", label: "Current Orders", icon: ShoppingBag },
-      { href: "/orders/past", label: "Past Orders", icon: FileText },
-      { href: "/returns", label: "Returns", icon: RotateCcw },
-      { href: "/returns/refunds", label: "Refunds", icon: RefreshCcw },
-      { href: "/warranties", label: "Warranty Claims", icon: Shield },
-    ],
-  },
+  // Order Management — hidden until checkout/Razorpay is live. Pages & APIs are
+  // kept; uncomment this group (and its icons above) to restore the tabs.
+  // {
+  //   label: "Order Management",
+  //   items: [
+  //     { href: "/orders", label: "Current Orders", icon: ShoppingBag },
+  //     { href: "/orders/past", label: "Past Orders", icon: FileText },
+  //     { href: "/returns", label: "Returns", icon: RotateCcw },
+  //     { href: "/returns/refunds", label: "Refunds", icon: RefreshCcw },
+  //     { href: "/warranties", label: "Warranty Claims", icon: Shield },
+  //   ],
+  // },
   {
     label: "Catalog",
     items: [
@@ -47,7 +51,8 @@ const navGroups = [
     items: [
       { href: "/enquiries", label: "Leads", icon: Inbox },
       { href: "/careers", label: "Careers", icon: Briefcase },
-      { href: "/promocodes", label: "Promo Codes", icon: Tag },
+      // Promo Codes — hidden until checkout/Razorpay is live (kept for later).
+      // { href: "/promocodes", label: "Promo Codes", icon: Tag },
       { href: "/banners", label: "Home Banners", icon: Image },
       { href: "/testimonials", label: "Testimonials", icon: Quote },
       { href: "/blogs", label: "Blogs", icon: FileText },
@@ -61,7 +66,8 @@ const navGroups = [
       { href: "/settings",                 label: "Settings",          icon: Settings   },
       // Tax Rules — out of scope (hidden from nav; page/API kept for later).
       // { href: "/settings/taxes",           label: "Tax Rules",         icon: Layers     },
-      { href: "/settings/payments",        label: "Payment Providers", icon: CreditCard },
+      // Payment Providers — hidden until Razorpay is configured (kept for later).
+      // { href: "/settings/payments",        label: "Payment Providers", icon: CreditCard },
       { href: "/settings/notifications",   label: "Notifications",     icon: Bell       },
       { href: "/products/tags",            label: "Product Tags",      icon: Tag        },
     ],
