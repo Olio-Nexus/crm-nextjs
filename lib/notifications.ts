@@ -25,6 +25,78 @@ function fmtDate(d: Date): string {
 }
 
 /**
+ * Where new-lead notifications go. Every storefront form (contact, quote,
+ * vendor, career, brochure, newsletter…) emails this single inbox for now.
+ * Override with LEADS_NOTIFY_TO if the client wants a different address.
+ */
+const LEADS_INBOX = process.env.LEADS_NOTIFY_TO ?? "info@plattera.in";
+
+/** Render one payload value for the notification email (arrays/objects too). */
+function fmtLeadValue(v: unknown): string {
+  if (Array.isArray(v)) return v.map(fmtLeadValue).join(", ");
+  if (v && typeof v === "object") {
+    return Object.entries(v as Record<string, unknown>)
+      .map(([k, val]) => `${k}: ${fmtLeadValue(val)}`)
+      .join(" · ");
+  }
+  return String(v);
+}
+
+/**
+ * Email the sales/ops inbox when a storefront form is submitted. Fire-and-forget:
+ * it never throws, so an email hiccup can't fail the visitor's submission.
+ * Include `fields` for anything beyond the common ones (e.g. requested products,
+ * job role, resume link) — they're listed in the body verbatim.
+ */
+export async function notifyNewLead(input: {
+  /** Human label for the form, e.g. "Request a Quote", "Vendor enquiry". */
+  kind: string;
+  name?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  message?: string | null;
+  fields?: Record<string, unknown> | null;
+}): Promise<void> {
+  try {
+    const rows: [string, string][] = [];
+    if (input.name) rows.push(["Name", input.name]);
+    if (input.email) rows.push(["Email", input.email]);
+    if (input.phone) rows.push(["Phone", input.phone]);
+    if (input.message) rows.push(["Message", input.message]);
+    for (const [k, v] of Object.entries(input.fields ?? {})) {
+      if (v == null || v === "" || (Array.isArray(v) && v.length === 0)) continue;
+      rows.push([k, fmtLeadValue(v)]);
+    }
+
+    const subject = `New ${input.kind} — Plattera website`;
+    const text =
+      `A new ${input.kind} was submitted on the Plattera website.\n\n` +
+      rows.map(([k, v]) => `${k}: ${v}`).join("\n") +
+      `\n\nView the full lead in the CRM → Leads.\n\n— Plattera website`;
+    const html =
+      `<div style="font-family:Arial,Helvetica,sans-serif;color:#1f2937;line-height:1.6">` +
+      `<h2 style="margin:0 0 12px">New ${input.kind}</h2>` +
+      `<p style="margin:0 0 16px;color:#4b5563">Submitted on the Plattera website.</p>` +
+      `<table style="border-collapse:collapse;font-size:14px">` +
+      rows
+        .map(
+          ([k, v]) =>
+            `<tr><td style="padding:4px 12px 4px 0;color:#6b7280;vertical-align:top;white-space:nowrap"><strong>${k}</strong></td>` +
+            `<td style="padding:4px 0;color:#111827">${String(v).replace(/</g, "&lt;")}</td></tr>`,
+        )
+        .join("") +
+      `</table>` +
+      `<p style="margin:20px 0 0;color:#6b7280;font-size:13px">View the full lead in the CRM → Leads.</p>` +
+      `</div>`;
+
+    await sendMail({ to: LEADS_INBOX, subject, text, html });
+  } catch (e) {
+    // Never let a notification failure break the submission.
+    console.warn(`[notifyNewLead] failed: ${String(e)}`);
+  }
+}
+
+/**
  * Send birthday/anniversary reminders for occasions LEAD_DAYS away.
  * Renders the OCCASION_REMINDER template, emails each customer, records a
  * notification_logs row, and dedups so a re-run the same day never

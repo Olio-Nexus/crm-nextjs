@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { storeJson, handleOptions } from "@/lib/store";
+import { notifyNewLead } from "@/lib/notifications";
 
 export const OPTIONS = handleOptions;
 
@@ -35,6 +36,19 @@ export async function POST(req: NextRequest) {
         role: d.role,
         resumeUrl: d.resumeUrl,
         message: d.message,
+      },
+    });
+
+    // Notify the sales/ops inbox (never blocks the submission if mail fails).
+    await notifyNewLead({
+      kind: "Career application",
+      name: d.name,
+      email: d.email,
+      phone: d.phone,
+      message: d.message,
+      fields: {
+        ...(d.role ? { Role: d.role } : {}),
+        ...(d.resumeUrl ? { Resume: d.resumeUrl } : {}),
       },
     });
 

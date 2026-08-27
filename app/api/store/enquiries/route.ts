@@ -2,8 +2,18 @@ import { NextRequest } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { storeJson, handleOptions } from "@/lib/store";
+import { notifyNewLead } from "@/lib/notifications";
 
 export const OPTIONS = handleOptions;
+
+/** Human labels for the notification email subject. */
+const KIND_LABEL: Record<string, string> = {
+  contact: "Contact enquiry",
+  newsletter: "Newsletter signup",
+  quote: "Request a Quote",
+  vendor: "Vendor enquiry",
+  brochure: "Brochure download",
+};
 
 const schema = z.object({
   type: z.enum(["contact", "newsletter", "quote", "vendor", "brochure"]),
@@ -35,6 +45,16 @@ export async function POST(req: NextRequest) {
         message: d.message,
         payload: d.payload ? (d.payload as object) : undefined,
       },
+    });
+
+    // Notify the sales/ops inbox (never blocks the submission if mail fails).
+    await notifyNewLead({
+      kind: KIND_LABEL[d.type] ?? "Website enquiry",
+      name: d.name,
+      email: d.email,
+      phone: d.phone,
+      message: d.message,
+      fields: d.payload ?? null,
     });
 
     return storeJson({ ok: true });
