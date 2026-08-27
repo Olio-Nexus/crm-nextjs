@@ -24,12 +24,35 @@ function fmtDate(d: Date): string {
   });
 }
 
+// Notification recipients per form, as specified by the client. A form can
+// notify several people (the whole set is emailed together).
+const CONTACT = "contact@plattera.in";
+const APURVA = "apurva.deshpande@plattera.in";
+const ASHWIN = "ashwin.singh@plattera.in";
+const TEAM = "team@plattera.in";
+
+/** Which addresses each website form ("channel") notifies. */
+const LEAD_RECIPIENTS: Record<string, string[]> = {
+  quote: [APURVA, ASHWIN, CONTACT], // Request a Quote / sales enquiry
+  vendor: [TEAM, CONTACT], // Vendor form
+  career: [APURVA], // Careers form
+  contact: [CONTACT], // general contact form
+  brochure: [CONTACT], // catalogue/brochure download
+  newsletter: [CONTACT], // newsletter signup
+};
+const DEFAULT_RECIPIENTS = [CONTACT];
+
 /**
- * Where new-lead notifications go. Every storefront form (contact, quote,
- * vendor, career, brochure, newsletter…) emails this single inbox for now.
- * Override with LEADS_NOTIFY_TO if the client wants a different address.
+ * Resolve the recipients for a form. LEADS_NOTIFY_TO (comma-separated) overrides
+ * everything — handy for routing all mail to one inbox while testing/staging.
  */
-const LEADS_INBOX = process.env.LEADS_NOTIFY_TO ?? "info@plattera.in";
+export function leadRecipients(channel: string): string[] {
+  const override = process.env.LEADS_NOTIFY_TO;
+  if (override) {
+    return override.split(",").map((s) => s.trim()).filter(Boolean);
+  }
+  return LEAD_RECIPIENTS[channel] ?? DEFAULT_RECIPIENTS;
+}
 
 /** Render one payload value for the notification email (arrays/objects too). */
 function fmtLeadValue(v: unknown): string {
@@ -49,6 +72,8 @@ function fmtLeadValue(v: unknown): string {
  * job role, resume link) — they're listed in the body verbatim.
  */
 export async function notifyNewLead(input: {
+  /** Routing key: "quote" | "vendor" | "career" | "contact" | "brochure"… */
+  channel: string;
   /** Human label for the form, e.g. "Request a Quote", "Vendor enquiry". */
   kind: string;
   name?: string | null;
@@ -89,7 +114,7 @@ export async function notifyNewLead(input: {
       `<p style="margin:20px 0 0;color:#6b7280;font-size:13px">View the full lead in the CRM → Leads.</p>` +
       `</div>`;
 
-    await sendMail({ to: LEADS_INBOX, subject, text, html });
+    await sendMail({ to: leadRecipients(input.channel), subject, text, html });
   } catch (e) {
     // Never let a notification failure break the submission.
     console.warn(`[notifyNewLead] failed: ${String(e)}`);

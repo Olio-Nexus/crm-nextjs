@@ -86,7 +86,8 @@ export async function verifySmtp() {
 }
 
 interface MailInput {
-  to: string;
+  /** One address, or several (e.g. a form that notifies a whole team). */
+  to: string | string[];
   subject: string;
   text: string;
   html?: string;
@@ -100,7 +101,7 @@ async function sendViaResend({ to, subject, text, html }: MailInput) {
       Authorization: `Bearer ${RESEND_API_KEY}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ from: MAIL_FROM, to: [to], reply_to: MAIL_REPLY_TO, subject, text, html: html ?? undefined }),
+    body: JSON.stringify({ from: MAIL_FROM, to: Array.isArray(to) ? to : [to], reply_to: MAIL_REPLY_TO, subject, text, html: html ?? undefined }),
   });
   if (!res.ok) {
     const detail = await res.text().catch(() => "");

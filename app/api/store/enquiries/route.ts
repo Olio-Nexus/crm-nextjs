@@ -47,8 +47,9 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // Notify the sales/ops inbox (never blocks the submission if mail fails).
+    // Notify the routed recipients (never blocks the submission if mail fails).
     await notifyNewLead({
+      channel: d.type,
       kind: KIND_LABEL[d.type] ?? "Website enquiry",
       name: d.name,
       email: d.email,

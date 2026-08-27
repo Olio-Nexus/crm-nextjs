@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Search, Filter, Inbox } from "lucide-react";
+import { Search, Filter, Inbox, X, Package, Mail, Phone, Calendar } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 import { TableLoading } from "@/components/shared/Spinner";
 
@@ -22,13 +22,83 @@ const TYPE_STYLE: Record<string, string> = {
   newsletter: "bg-purple-100 text-purple-700",
   quote: "bg-brand-100 text-brand-700",
   vendor: "bg-amber-100 text-amber-700",
+  brochure: "bg-emerald-100 text-emerald-700",
 };
 
-function payloadSummary(payload: Record<string, unknown> | null): string {
-  if (!payload) return "";
+/** Friendly label for a form type. */
+const TYPE_LABEL: Record<string, string> = {
+  contact: "Contact",
+  newsletter: "Newsletter",
+  quote: "Request a Quote",
+  vendor: "Vendor",
+  brochure: "Brochure",
+};
+
+// Friendly labels + display order for the payload fields the storefront sends.
+const FIELD_LABELS: Record<string, string> = {
+  product: "Product",
+  company: "Company",
+  occasion: "Occasion",
+  quantity: "Quantity",
+  budget: "Budget",
+  deliveryDate: "Delivery date",
+  customization: "Customization",
+  role: "Role",
+  resumeUrl: "Resume",
+  message: "Message",
+};
+const HIDDEN_FIELDS = new Set(["source", "productSlug"]);
+const FIELD_ORDER = [
+  "product",
+  "company",
+  "occasion",
+  "quantity",
+  "budget",
+  "deliveryDate",
+  "customization",
+];
+
+/** "camelCase" / "snake_case" → "Camel Case". */
+function humanize(key: string): string {
+  const s = key.replace(/[_-]+/g, " ").replace(/([a-z])([A-Z])/g, "$1 $2");
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+function fmtValue(v: unknown): string {
+  if (Array.isArray(v)) return v.join(", ");
+  if (v && typeof v === "object") return JSON.stringify(v);
+  return String(v);
+}
+
+/** The requested product, if this lead carries one. */
+function payloadProduct(payload: Record<string, unknown> | null): string | null {
+  const p = payload?.product;
+  return typeof p === "string" && p.trim() ? p : null;
+}
+
+/** Ordered, humanized [label, value] rows from a lead's payload (for the modal). */
+function payloadRows(payload: Record<string, unknown> | null): [string, string][] {
+  if (!payload) return [];
   return Object.entries(payload)
-    .filter(([, v]) => v != null && v !== "" && !(Array.isArray(v) && v.length === 0))
-    .map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(", ") : v}`)
+    .filter(
+      ([k, v]) =>
+        !HIDDEN_FIELDS.has(k) &&
+        v != null &&
+        v !== "" &&
+        !(Array.isArray(v) && v.length === 0),
+    )
+    .sort(([a], [b]) => {
+      const ia = FIELD_ORDER.indexOf(a);
+      const ib = FIELD_ORDER.indexOf(b);
+      return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
+    })
+    .map(([k, v]) => [FIELD_LABELS[k] ?? humanize(k), fmtValue(v)]);
+}
+
+/** Short one-liner used in the table's Details column. */
+function payloadSummary(payload: Record<string, unknown> | null): string {
+  return payloadRows(payload)
+    .map(([k, v]) => `${k}: ${v}`)
     .join(" · ");
 }
 
@@ -40,6 +110,7 @@ export default function EnquiriesPage() {
   const [search, setSearch] = useState("");
   const [type, setType] = useState("");
   const [loading, setLoading] = useState(true);
+  const [selected, setSelected] = useState<Enquiry | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -58,6 +129,16 @@ export default function EnquiriesPage() {
     const t = setTimeout(load, 300);
     return () => clearTimeout(t);
   }, [load]);
+
+  // Close the detail popup on Escape.
+  useEffect(() => {
+    if (!selected) return;
+    const onKey = (ev: KeyboardEvent) => {
+      if (ev.key === "Escape") setSelected(null);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [selected]);
 
   return (
     <div>
@@ -117,26 +198,38 @@ export default function EnquiriesPage() {
                   </td>
                 </tr>
               )}
-              {enquiries.map((e) => (
-                <tr key={e.id} className="hover:bg-gray-50 transition-colors align-top">
-                  <td className="px-4 py-3">
-                    <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-semibold capitalize ${TYPE_STYLE[e.type] ?? "bg-gray-100 text-gray-600"}`}>
-                      {e.type}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 font-medium text-gray-900">{e.name ?? "—"}</td>
-                  <td className="px-4 py-3 text-gray-500">{e.email ?? "—"}</td>
-                  <td className="px-4 py-3 text-gray-500">{e.phone ?? "—"}</td>
-                  <td className="px-4 py-3 text-gray-600 max-w-md">
-                    {e.message && <p>{e.message}</p>}
-                    {payloadSummary(e.payload) && (
-                      <p className="text-xs text-gray-400 mt-1">{payloadSummary(e.payload)}</p>
-                    )}
-                    {!e.message && !payloadSummary(e.payload) && "—"}
-                  </td>
-                  <td className="px-4 py-3 text-gray-400 text-xs whitespace-nowrap">{formatDate(e.createdAt)}</td>
-                </tr>
-              ))}
+              {enquiries.map((e) => {
+                const product = payloadProduct(e.payload);
+                return (
+                  <tr
+                    key={e.id}
+                    onClick={() => setSelected(e)}
+                    className="hover:bg-brand-50/40 transition-colors align-top cursor-pointer"
+                  >
+                    <td className="px-4 py-3">
+                      <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-semibold capitalize ${TYPE_STYLE[e.type] ?? "bg-gray-100 text-gray-600"}`}>
+                        {TYPE_LABEL[e.type] ?? e.type}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 font-medium text-gray-900">{e.name ?? "—"}</td>
+                    <td className="px-4 py-3 text-gray-500">{e.email ?? "—"}</td>
+                    <td className="px-4 py-3 text-gray-500">{e.phone ?? "—"}</td>
+                    <td className="px-4 py-3 text-gray-600 max-w-md">
+                      {product && (
+                        <p className="mb-1 inline-flex items-center gap-1.5 rounded-md bg-brand-100 px-2 py-0.5 text-xs font-semibold text-brand-700">
+                          <Package size={12} /> {product}
+                        </p>
+                      )}
+                      {e.message && <p className="line-clamp-2">{e.message}</p>}
+                      {payloadSummary(e.payload) && (
+                        <p className="text-xs text-gray-400 mt-1 line-clamp-1">{payloadSummary(e.payload)}</p>
+                      )}
+                      {!product && !e.message && !payloadSummary(e.payload) && "—"}
+                    </td>
+                    <td className="px-4 py-3 text-gray-400 text-xs whitespace-nowrap">{formatDate(e.createdAt)}</td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -151,6 +244,100 @@ export default function EnquiriesPage() {
           </div>
         )}
       </div>
+
+      {/* Detail popup — full, readable view of a single lead. */}
+      {selected && (
+        <div
+          className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 p-4 sm:p-6"
+          onClick={() => setSelected(null)}
+        >
+          <div
+            className="relative mt-10 w-full max-w-lg rounded-2xl bg-white shadow-xl"
+            onClick={(ev) => ev.stopPropagation()}
+          >
+            <button
+              onClick={() => setSelected(null)}
+              aria-label="Close"
+              className="absolute right-4 top-4 text-gray-400 hover:text-gray-700 transition-colors"
+            >
+              <X size={18} />
+            </button>
+
+            <div className="p-6">
+              <div className="flex items-center gap-2">
+                <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-semibold capitalize ${TYPE_STYLE[selected.type] ?? "bg-gray-100 text-gray-600"}`}>
+                  {TYPE_LABEL[selected.type] ?? selected.type}
+                </span>
+                <span className="inline-flex items-center gap-1 text-xs text-gray-400">
+                  <Calendar size={12} /> {formatDate(selected.createdAt)}
+                </span>
+              </div>
+
+              {payloadProduct(selected.payload) && (
+                <div className="mt-4 rounded-xl border border-brand-100 bg-brand-50 px-4 py-3">
+                  <p className="text-xs font-medium uppercase tracking-wide text-brand-700/70">
+                    Quote requested for
+                  </p>
+                  <p className="mt-0.5 flex items-center gap-2 text-base font-semibold text-brand-700">
+                    <Package size={16} /> {payloadProduct(selected.payload)}
+                  </p>
+                </div>
+              )}
+
+              <h3 className="mt-5 text-sm font-semibold text-gray-900">
+                {selected.name ?? "—"}
+              </h3>
+              <div className="mt-2 space-y-1.5 text-sm">
+                {selected.email && (
+                  <a
+                    href={`mailto:${selected.email}`}
+                    className="flex items-center gap-2 text-gray-600 hover:text-brand-600"
+                  >
+                    <Mail size={14} className="text-gray-400" /> {selected.email}
+                  </a>
+                )}
+                {selected.phone && (
+                  <a
+                    href={`tel:${selected.phone}`}
+                    className="flex items-center gap-2 text-gray-600 hover:text-brand-600"
+                  >
+                    <Phone size={14} className="text-gray-400" /> {selected.phone}
+                  </a>
+                )}
+              </div>
+
+              {selected.message && (
+                <div className="mt-4">
+                  <p className="text-xs font-medium uppercase tracking-wide text-gray-400">
+                    Message
+                  </p>
+                  <p className="mt-1 whitespace-pre-wrap text-sm text-gray-700">
+                    {selected.message}
+                  </p>
+                </div>
+              )}
+
+              {payloadRows(selected.payload).filter(([l]) => l !== "Product").length > 0 && (
+                <div className="mt-4 border-t border-gray-100 pt-4">
+                  <p className="mb-2 text-xs font-medium uppercase tracking-wide text-gray-400">
+                    Details
+                  </p>
+                  <dl className="space-y-2">
+                    {payloadRows(selected.payload)
+                      .filter(([l]) => l !== "Product")
+                      .map(([label, value]) => (
+                        <div key={label} className="flex gap-3 text-sm">
+                          <dt className="w-32 shrink-0 text-gray-500">{label}</dt>
+                          <dd className="break-words text-gray-900">{value}</dd>
+                        </div>
+                      ))}
+                  </dl>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
