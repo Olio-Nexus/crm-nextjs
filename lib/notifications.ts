@@ -65,6 +65,30 @@ function fmtLeadValue(v: unknown): string {
   return String(v);
 }
 
+/** Internal payload keys we don't show in the notification email. */
+const HIDDEN_LEAD_FIELDS = new Set(["productSlug", "source"]);
+
+/** Friendly labels for payload keys (falls back to a title-cased key). */
+const LEAD_KEY_LABELS: Record<string, string> = {
+  product: "Product",
+  company: "Company",
+  occasion: "Occasion",
+  quantity: "Quantity",
+  budget: "Budget",
+  deliveryDate: "Delivery date",
+  customization: "Customization",
+  role: "Role",
+  resumeUrl: "Resume",
+  catalogue: "Catalogue",
+  category: "Category",
+  website: "Website",
+};
+function humanizeLeadKey(k: string): string {
+  if (LEAD_KEY_LABELS[k]) return LEAD_KEY_LABELS[k];
+  const s = k.replace(/[_-]+/g, " ").replace(/([a-z])([A-Z])/g, "$1 $2");
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
 /**
  * Email the sales/ops inbox when a storefront form is submitted. Fire-and-forget:
  * it never throws, so an email hiccup can't fail the visitor's submission.
@@ -89,8 +113,9 @@ export async function notifyNewLead(input: {
     if (input.phone) rows.push(["Phone", input.phone]);
     if (input.message) rows.push(["Message", input.message]);
     for (const [k, v] of Object.entries(input.fields ?? {})) {
+      if (HIDDEN_LEAD_FIELDS.has(k)) continue;
       if (v == null || v === "" || (Array.isArray(v) && v.length === 0)) continue;
-      rows.push([k, fmtLeadValue(v)]);
+      rows.push([humanizeLeadKey(k), fmtLeadValue(v)]);
     }
 
     const subject = `New ${input.kind} — Plattera website`;
@@ -98,20 +123,35 @@ export async function notifyNewLead(input: {
       `A new ${input.kind} was submitted on the Plattera website.\n\n` +
       rows.map(([k, v]) => `${k}: ${v}`).join("\n") +
       `\n\nView the full lead in the CRM → Leads.\n\n— Plattera website`;
+
+    // Brand-themed HTML (Plattera green #295A4F on a warm cream ground).
+    const esc = (s: string) => s.replace(/</g, "&lt;");
+    const rowsHtml = rows
+      .map(([k, v]) => {
+        const isProduct = k.toLowerCase() === "product";
+        return (
+          `<tr>` +
+          `<td style="padding:10px 16px 10px 0;color:#7c7568;font-size:12px;text-transform:uppercase;letter-spacing:0.4px;vertical-align:top;white-space:nowrap;border-bottom:1px solid #f0ece2">${esc(k)}</td>` +
+          `<td style="padding:10px 0;font-size:14px;border-bottom:1px solid #f0ece2;${isProduct ? "color:#295A4F;font-weight:700" : "color:#1f2937"}">${esc(v)}</td>` +
+          `</tr>`
+        );
+      })
+      .join("");
     const html =
-      `<div style="font-family:Arial,Helvetica,sans-serif;color:#1f2937;line-height:1.6">` +
-      `<h2 style="margin:0 0 12px">New ${input.kind}</h2>` +
-      `<p style="margin:0 0 16px;color:#4b5563">Submitted on the Plattera website.</p>` +
-      `<table style="border-collapse:collapse;font-size:14px">` +
-      rows
-        .map(
-          ([k, v]) =>
-            `<tr><td style="padding:4px 12px 4px 0;color:#6b7280;vertical-align:top;white-space:nowrap"><strong>${k}</strong></td>` +
-            `<td style="padding:4px 0;color:#111827">${String(v).replace(/</g, "&lt;")}</td></tr>`,
-        )
-        .join("") +
-      `</table>` +
-      `<p style="margin:20px 0 0;color:#6b7280;font-size:13px">View the full lead in the CRM → Leads.</p>` +
+      `<div style="margin:0;padding:24px;background:#f4f1ea;font-family:Arial,Helvetica,sans-serif">` +
+      `<div style="max-width:560px;margin:0 auto;background:#ffffff;border-radius:14px;overflow:hidden;border:1px solid #e7e2d6">` +
+      `<div style="background:#295A4F;padding:22px 28px">` +
+      `<div style="color:#ffffff;font-size:20px;font-weight:700;letter-spacing:0.5px">Plattera</div>` +
+      `<div style="color:#bcd3cc;font-size:13px;margin-top:3px">New ${esc(input.kind)}</div>` +
+      `</div>` +
+      `<div style="padding:24px 28px">` +
+      `<p style="margin:0 0 18px;color:#4b5563;font-size:14px;line-height:1.6">A new <strong style="color:#295A4F">${esc(input.kind)}</strong> was submitted on the Plattera website.</p>` +
+      `<table style="width:100%;border-collapse:collapse">${rowsHtml}</table>` +
+      `</div>` +
+      `<div style="padding:16px 28px;background:#faf8f3;border-top:1px solid #efe9dc">` +
+      `<p style="margin:0;color:#9a9384;font-size:12px;line-height:1.5">View the full lead in the CRM &rarr; Leads. This is an automated notification from the Plattera website.</p>` +
+      `</div>` +
+      `</div>` +
       `</div>`;
 
     await sendMail({ to: leadRecipients(input.channel), subject, text, html });
