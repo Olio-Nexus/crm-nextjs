@@ -252,7 +252,7 @@ export default function EnquiriesPage() {
           onClick={() => setSelected(null)}
         >
           <div
-            className="relative mt-10 w-full max-w-lg rounded-2xl bg-white shadow-xl"
+            className="relative mt-10 w-full max-w-lg rounded-2xl border border-gray-200 bg-surface shadow-xl"
             onClick={(ev) => ev.stopPropagation()}
           >
             <button
@@ -275,7 +275,7 @@ export default function EnquiriesPage() {
 
               {payloadProduct(selected.payload) && (
                 <div className="mt-4 rounded-xl border border-brand-100 bg-brand-50 px-4 py-3">
-                  <p className="text-xs font-medium uppercase tracking-wide text-brand-700/70">
+                  <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
                     Quote requested for
                   </p>
                   <p className="mt-0.5 flex items-center gap-2 text-base font-semibold text-brand-700">
