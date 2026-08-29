@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import Link from "next/link";
 import { Search, Filter, Inbox, X, Package, Mail, Phone, Calendar, Download } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 import { TableLoading } from "@/components/shared/Spinner";
@@ -118,8 +119,9 @@ export default function EnquiriesPage() {
   const [type, setType] = useState("");
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<Enquiry | null>(null);
-  // Product image for the open quote (from the payload, or fetched by slug).
+  // Product image + CRM id for the open quote (resolved from the product slug).
   const [productImg, setProductImg] = useState<string | null>(null);
+  const [productDbId, setProductDbId] = useState<number | null>(null);
 
   // `silent` skips the loading spinner — used by the background auto-refresh so
   // the table updates without flashing.
@@ -163,18 +165,23 @@ export default function EnquiriesPage() {
     const payload = selected?.payload ?? null;
     const fromPayload =
       payload && typeof payload.productImage === "string" ? payload.productImage : null;
-    // Seed from the payload (or clear) up front; the fetch below fills it in.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setProductImg(fromPayload);
     const slug =
       payload && typeof payload.productSlug === "string" ? payload.productSlug : null;
-    if (fromPayload || !slug) return;
+    // Seed from the payload (or clear) up front; the fetch below fills in the
+    // image (if not saved) and the CRM product id used to deep-link.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setProductImg(fromPayload);
+    setProductDbId(null);
+    if (!slug) return;
     let active = true;
     fetch(`/api/store/products/${encodeURIComponent(slug)}`)
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
-        const img = d?.product?.images?.[0];
-        if (active && typeof img === "string") setProductImg(img);
+        if (!active || !d?.product) return;
+        if (typeof d.product.dbId === "number") setProductDbId(d.product.dbId);
+        if (!fromPayload && typeof d.product.images?.[0] === "string") {
+          setProductImg(d.product.images[0]);
+        }
       })
       .catch(() => {});
     return () => {
@@ -320,19 +327,40 @@ export default function EnquiriesPage() {
                   <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
                     Quote requested for
                   </p>
-                  <div className="mt-1.5 flex items-center gap-3">
-                    {productImg && (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={productImg}
-                        alt={payloadProduct(selected.payload) ?? ""}
-                        className="h-14 w-14 shrink-0 rounded-lg border border-brand-100 object-cover"
-                      />
-                    )}
-                    <p className="flex items-center gap-2 text-base font-semibold text-brand-700">
-                      <Package size={16} /> {payloadProduct(selected.payload)}
-                    </p>
-                  </div>
+                  {productDbId ? (
+                    <Link
+                      href={`/products/${productDbId}/edit`}
+                      title="Open this product in the CRM"
+                      className="group mt-1.5 flex items-center gap-3"
+                    >
+                      {productImg && (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={productImg}
+                          alt={payloadProduct(selected.payload) ?? ""}
+                          className="h-14 w-14 shrink-0 rounded-lg border border-brand-100 object-cover"
+                        />
+                      )}
+                      <span className="flex items-center gap-2 text-base font-semibold text-brand-700 group-hover:underline">
+                        <Package size={16} /> {payloadProduct(selected.payload)}
+                        <span className="text-xs font-normal text-brand-600">→ open</span>
+                      </span>
+                    </Link>
+                  ) : (
+                    <div className="mt-1.5 flex items-center gap-3">
+                      {productImg && (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={productImg}
+                          alt={payloadProduct(selected.payload) ?? ""}
+                          className="h-14 w-14 shrink-0 rounded-lg border border-brand-100 object-cover"
+                        />
+                      )}
+                      <p className="flex items-center gap-2 text-base font-semibold text-brand-700">
+                        <Package size={16} /> {payloadProduct(selected.payload)}
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
 

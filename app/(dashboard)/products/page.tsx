@@ -177,16 +177,15 @@ export default function ProductsPage() {
               <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
               <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
               <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Stock</th>
-              <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Tags</th>
               <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
               <th className="px-4 py-3"></th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
-            {loading && <TableLoading colSpan={7} />}
+            {loading && <TableLoading colSpan={6} />}
             {!loading && products.length === 0 && (
               <tr>
-                <td colSpan={7} className="py-12 text-center">
+                <td colSpan={6} className="py-12 text-center">
                   <Package size={32} className="mx-auto text-gray-200 mb-2" />
                   <p className="text-gray-400 text-sm">No products found</p>
                 </td>
@@ -218,13 +217,6 @@ export default function ProductsPage() {
                     <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${totalStock > 0 ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}>
                       {totalStock} in stock
                     </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex flex-wrap gap-1">
-                      {p.isFeatured && <span className="px-1.5 py-0.5 bg-purple-100 text-purple-700 rounded text-xs">Featured</span>}
-                      {p.isNew && <span className="px-1.5 py-0.5 bg-brand-100 text-brand-700 rounded text-xs">New</span>}
-                      {p.isBestSeller && <span className="px-1.5 py-0.5 bg-orange-100 text-orange-700 rounded text-xs">Bestseller</span>}
-                    </div>
                   </td>
                   <td className="px-4 py-3">
                     <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${p.status ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-500"}`}>

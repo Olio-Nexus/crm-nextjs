@@ -139,6 +139,9 @@ export function shapeProductDetail(p: any) {
   }));
   return {
     ...shapeProductCard(p),
+    // Numeric CRM product id — lets the CRM deep-link to the product's edit page
+    // (the storefront ignores it; `id` stays the urlSlug).
+    dbId: p.id,
     description: p.description,
     metaTitle: p.metaTitle ?? null,
     metaDescription: p.metaDescription ?? null,
