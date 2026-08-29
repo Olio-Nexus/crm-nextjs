@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Plus, Pencil, Trash2, Search, Package } from "lucide-react";
-import { formatINR, formatDate } from "@/lib/utils";
+import { Plus, Pencil, Trash2, Search, Package, Upload, Download } from "lucide-react";
+import { formatINR } from "@/lib/utils";
 import { TableLoading } from "@/components/shared/Spinner";
 
 interface Product {
@@ -35,6 +35,13 @@ export default function ProductsPage() {
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState<number | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadResult, setUploadResult] = useState<{
+    created: number;
+    failed: number;
+    errors: { row: number; message: string }[];
+  } | null>(null);
 
   const fetchProducts = useCallback(async () => {
     setLoading(true);
@@ -59,6 +66,30 @@ export default function ProductsPage() {
     setDeleting(null);
   }
 
+  async function handleBulkUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // allow re-selecting the same file
+    if (!file) return;
+    setUploading(true);
+    setUploadResult(null);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch("/api/products/bulk-upload", { method: "POST", body: fd });
+      const json = await res.json();
+      if (!res.ok) {
+        setUploadResult({ created: 0, failed: 0, errors: [{ row: 0, message: json.error ?? "Upload failed." }] });
+      } else {
+        setUploadResult(json);
+        fetchProducts();
+      }
+    } catch {
+      setUploadResult({ created: 0, failed: 0, errors: [{ row: 0, message: "Upload failed." }] });
+    } finally {
+      setUploading(false);
+    }
+  }
+
   const products = data?.products ?? [];
 
   return (
@@ -68,11 +99,66 @@ export default function ProductsPage() {
           <h1 className="text-xl font-semibold text-gray-900">Products</h1>
           <p className="text-sm text-gray-500 mt-0.5">{data?.total ?? 0} total products</p>
         </div>
-        <Link href="/products/new"
-          className="flex items-center gap-2 px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white text-sm font-medium rounded-lg transition-colors">
-          <Plus size={16} /> New Product
-        </Link>
+        <div className="flex items-center gap-2">
+          {/* File download from an API route — a plain <a> is correct here. */}
+          {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
+          <a
+            href="/api/products/bulk-template"
+            className="flex items-center gap-2 px-3 py-2 border border-gray-200 text-gray-700 hover:bg-gray-50 text-sm font-medium rounded-lg transition-colors"
+          >
+            <Download size={16} /> Template
+          </a>
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading}
+            className="flex items-center gap-2 px-3 py-2 border border-gray-200 text-gray-700 hover:bg-gray-50 text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
+          >
+            <Upload size={16} /> {uploading ? "Uploading…" : "Bulk Upload"}
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".xlsx"
+            onChange={handleBulkUpload}
+            className="hidden"
+          />
+          <Link href="/products/new"
+            className="flex items-center gap-2 px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white text-sm font-medium rounded-lg transition-colors">
+            <Plus size={16} /> New Product
+          </Link>
+        </div>
       </div>
+
+      {uploadResult && (
+        <div className="mb-4 rounded-xl border border-gray-200 bg-surface p-4 text-sm">
+          <div className="flex items-center justify-between">
+            <p className="font-medium text-gray-900">
+              Bulk upload:{" "}
+              <span className="text-brand-700">{uploadResult.created} created</span>
+              {uploadResult.failed > 0 && (
+                <span className="text-red-600">, {uploadResult.failed} skipped</span>
+              )}
+            </p>
+            <button
+              onClick={() => setUploadResult(null)}
+              className="text-gray-400 hover:text-gray-700"
+              aria-label="Dismiss"
+            >
+              ✕
+            </button>
+          </div>
+          {uploadResult.errors.length > 0 && (
+            <ul className="mt-2 max-h-40 space-y-1 overflow-y-auto text-gray-600">
+              {uploadResult.errors.map((er, i) => (
+                <li key={i}>
+                  {er.row > 0 ? `Row ${er.row}: ` : ""}
+                  {er.message}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
 
       <div className="bg-surface rounded-xl border border-gray-200 overflow-hidden">
         <div className="p-4 border-b border-gray-100">

@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Search, Eye, Users, Filter } from "lucide-react";
+import { Search, Eye, Users, Filter, Download } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 import { TableLoading } from "@/components/shared/Spinner";
 
@@ -53,6 +53,14 @@ export default function CustomersPage() {
           <h1 className="text-xl font-semibold text-gray-900">Customers</h1>
           <p className="text-sm text-gray-500 mt-0.5">{total} registered customers</p>
         </div>
+        {/* File download from an API route — a plain <a> is correct here. */}
+        {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
+        <a
+          href="/api/customers/export"
+          className="flex items-center gap-2 px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white text-sm font-medium rounded-lg transition-colors"
+        >
+          <Download size={16} /> Export to Excel
+        </a>
       </div>
 
       <div className="bg-surface rounded-2xl border border-gray-200 overflow-hidden">
