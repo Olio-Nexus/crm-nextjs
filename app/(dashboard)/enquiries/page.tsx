@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Search, Filter, Inbox, X, Package, Mail, Phone, Calendar } from "lucide-react";
+import { Search, Filter, Inbox, X, Package, Mail, Phone, Calendar, Download } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 import { TableLoading } from "@/components/shared/Spinner";
 
@@ -37,6 +37,13 @@ const TYPE_LABEL: Record<string, string> = {
 // Friendly labels + display order for the payload fields the storefront sends.
 const FIELD_LABELS: Record<string, string> = {
   product: "Product",
+  brochureUrl: "Brochure",
+  catalogueUrl: "Catalogue",
+  proposalUrl: "Proposal",
+  website: "Website",
+  state: "State",
+  city: "City",
+  notes: "Notes",
   company: "Company",
   occasion: "Occasion",
   quantity: "Quantity",
@@ -373,7 +380,20 @@ export default function EnquiriesPage() {
                       .map(([label, value]) => (
                         <div key={label} className="flex gap-3 text-sm">
                           <dt className="w-32 shrink-0 text-gray-500">{label}</dt>
-                          <dd className="break-words text-gray-900">{value}</dd>
+                          <dd className="break-words text-gray-900">
+                            {/^https?:\/\//i.test(value) ? (
+                              <a
+                                href={value}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 text-brand-600 hover:underline"
+                              >
+                                <Download size={13} /> Download / View
+                              </a>
+                            ) : (
+                              value
+                            )}
+                          </dd>
                         </div>
                       ))}
                   </dl>

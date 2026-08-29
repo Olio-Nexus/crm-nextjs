@@ -43,7 +43,7 @@ const EXT: Record<string, string> = {
   "application/pdf": "pdf",
 };
 
-export const MAX_UPLOAD_BYTES = 10 * 1024 * 1024; // 10 MB
+export const MAX_UPLOAD_BYTES = 25 * 1024 * 1024; // 25 MB
 
 /** Allow-list of accepted content types. PDFs only where explicitly permitted. */
 export function isAllowedType(type: string, allowPdf = false): boolean {

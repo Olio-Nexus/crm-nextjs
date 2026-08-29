@@ -20,9 +20,11 @@ function cellText(v: ExcelJS.CellValue): string {
       result?: unknown;
       hyperlink?: unknown;
     };
+    // Prefer the hyperlink target (so an image cell yields the real URL, not the
+    // display text) — falls back to text / formula result.
+    if (typeof o.hyperlink === "string") return o.hyperlink.trim();
     if (typeof o.text === "string") return o.text.trim();
     if (o.result != null) return String(o.result).trim();
-    if (typeof o.hyperlink === "string") return o.hyperlink.trim();
     return "";
   }
   return String(v).trim();
@@ -138,6 +140,12 @@ export async function POST(req: NextRequest) {
     const status = get(row, "Status").toLowerCase() === "active";
     const shortDesc = get(row, "Short Description");
     const desc = get(row, "Description");
+    const ratingStr = get(row, "Rating");
+    const rating = ratingStr !== "" && !Number.isNaN(parseFloat(ratingStr)) ? parseFloat(ratingStr) : null;
+    const reviewStr = get(row, "Review Count");
+    const reviewCount = reviewStr !== "" && !Number.isNaN(parseInt(reviewStr)) ? parseInt(reviewStr) : null;
+    const deliveryTimeline = get(row, "Delivery Timeline") || null;
+    const badge = get(row, "Badge") || null;
 
     try {
       const skuTaken = await prisma.productVariation.findFirst({ where: { sku }, select: { id: true } });
@@ -166,6 +174,10 @@ export async function POST(req: NextRequest) {
           giftMode,
           occasions,
           status,
+          rating,
+          reviewCount,
+          deliveryTimeline,
+          badge,
           variations: {
             create: [{
               sku,
