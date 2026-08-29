@@ -47,7 +47,7 @@ const FIELD_LABELS: Record<string, string> = {
   resumeUrl: "Resume",
   message: "Message",
 };
-const HIDDEN_FIELDS = new Set(["source", "productSlug"]);
+const HIDDEN_FIELDS = new Set(["source", "productSlug", "productImage"]);
 const FIELD_ORDER = [
   "product",
   "company",
@@ -111,6 +111,8 @@ export default function EnquiriesPage() {
   const [type, setType] = useState("");
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<Enquiry | null>(null);
+  // Product image for the open quote (from the payload, or fetched by slug).
+  const [productImg, setProductImg] = useState<string | null>(null);
 
   // `silent` skips the loading spinner — used by the background auto-refresh so
   // the table updates without flashing.
@@ -146,6 +148,31 @@ export default function EnquiriesPage() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
+  }, [selected]);
+
+  // Resolve the product image for the open quote: use the one saved in the
+  // payload if present, otherwise fetch it by the product's slug.
+  useEffect(() => {
+    const payload = selected?.payload ?? null;
+    const fromPayload =
+      payload && typeof payload.productImage === "string" ? payload.productImage : null;
+    // Seed from the payload (or clear) up front; the fetch below fills it in.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setProductImg(fromPayload);
+    const slug =
+      payload && typeof payload.productSlug === "string" ? payload.productSlug : null;
+    if (fromPayload || !slug) return;
+    let active = true;
+    fetch(`/api/store/products/${encodeURIComponent(slug)}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        const img = d?.product?.images?.[0];
+        if (active && typeof img === "string") setProductImg(img);
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
   }, [selected]);
 
   return (
@@ -286,9 +313,19 @@ export default function EnquiriesPage() {
                   <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
                     Quote requested for
                   </p>
-                  <p className="mt-0.5 flex items-center gap-2 text-base font-semibold text-brand-700">
-                    <Package size={16} /> {payloadProduct(selected.payload)}
-                  </p>
+                  <div className="mt-1.5 flex items-center gap-3">
+                    {productImg && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={productImg}
+                        alt={payloadProduct(selected.payload) ?? ""}
+                        className="h-14 w-14 shrink-0 rounded-lg border border-brand-100 object-cover"
+                      />
+                    )}
+                    <p className="flex items-center gap-2 text-base font-semibold text-brand-700">
+                      <Package size={16} /> {payloadProduct(selected.payload)}
+                    </p>
+                  </div>
                 </div>
               )}
 

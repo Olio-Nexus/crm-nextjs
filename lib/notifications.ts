@@ -66,7 +66,7 @@ function fmtLeadValue(v: unknown): string {
 }
 
 /** Internal payload keys we don't show in the notification email. */
-const HIDDEN_LEAD_FIELDS = new Set(["productSlug", "source"]);
+const HIDDEN_LEAD_FIELDS = new Set(["productSlug", "source", "productImage"]);
 
 /** Friendly labels for payload keys (falls back to a title-cased key). */
 const LEAD_KEY_LABELS: Record<string, string> = {
