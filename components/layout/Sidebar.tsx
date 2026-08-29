@@ -4,12 +4,12 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import {
-  LayoutDashboard, Package, Users, Tag,
+  LayoutDashboard, Package, Users,
   BarChart2, Image, Settings,
   X, UserCog, Layers,
   FileText, Bell, MessageSquare, Inbox, Briefcase, Quote,
-  // Icons for the payment/order tabs hidden until Razorpay is live (see below):
-  // ShoppingBag, RotateCcw, Shield, RefreshCcw, CreditCard
+  // Icons for tabs hidden until later (payment/order + Product Tags):
+  // ShoppingBag, RotateCcw, Shield, RefreshCcw, CreditCard, Tag
 } from "lucide-react";
 
 const navGroups = [
@@ -69,7 +69,8 @@ const navGroups = [
       // Payment Providers — hidden until Razorpay is configured (kept for later).
       // { href: "/settings/payments",        label: "Payment Providers", icon: CreditCard },
       { href: "/settings/notifications",   label: "Notifications",     icon: Bell       },
-      { href: "/products/tags",            label: "Product Tags",      icon: Tag        },
+      // Product Tags — hidden for now (not surfaced on the storefront; kept for later).
+      // { href: "/products/tags",            label: "Product Tags",      icon: Tag        },
     ],
   },
 ];
