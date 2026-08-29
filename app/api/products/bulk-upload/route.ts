@@ -64,13 +64,20 @@ export async function POST(req: NextRequest) {
     return idx ? cellText(row.getCell(idx).value) : "";
   };
 
-  // Preload subcategories → "category||subcategory" (lowercased) → id.
+  // Preload categories → id, and each category → its (auto-managed) sub-category
+  // id. Sub-categories are hidden from the admin; every category has one.
+  const cats = await prisma.category.findMany({ select: { id: true, name: true } });
+  const catByName = new Map<string, number>();
+  for (const c of cats) catByName.set(c.name.toLowerCase(), c.id);
+
   const subs = await prisma.subCategory.findMany({
-    select: { id: true, name: true, category: { select: { name: true } } },
+    select: { id: true, category: { select: { name: true } } },
+    orderBy: { id: "asc" },
   });
-  const subMap = new Map<string, number>();
+  const catToSub = new Map<string, number>();
   for (const s of subs) {
-    subMap.set(`${(s.category?.name ?? "").toLowerCase()}||${s.name.toLowerCase()}`, s.id);
+    const cat = (s.category?.name ?? "").toLowerCase();
+    if (cat && !catToSub.has(cat)) catToSub.set(cat, s.id);
   }
 
   const errors: { row: number; message: string }[] = [];
@@ -87,19 +94,33 @@ export async function POST(req: NextRequest) {
     const name = get(row, "Product Name");
     const sku = get(row, "SKU");
     const category = get(row, "Category");
-    const subcategory = get(row, "Subcategory");
 
     // Skip blank rows entirely.
-    if (!name && !sku && !category && !subcategory) continue;
+    if (!name && !sku && !category) continue;
 
-    if (!name || !sku || !category || !subcategory) {
-      errors.push({ row: n, message: "Missing a required field (Product Name, SKU, Category, Subcategory)." });
+    if (!name || !sku || !category) {
+      errors.push({ row: n, message: "Missing a required field (Product Name, SKU, Category)." });
       continue;
     }
-    const subId = subMap.get(`${category.toLowerCase()}||${subcategory.toLowerCase()}`);
-    if (!subId) {
-      errors.push({ row: n, message: `Subcategory "${subcategory}" under category "${category}" not found — create it first.` });
+    const catKey = category.toLowerCase();
+    const catId = catByName.get(catKey);
+    if (!catId) {
+      errors.push({ row: n, message: `Category "${category}" not found — create it first.` });
       continue;
+    }
+    // Resolve the category's (auto) sub-category — create one if it has none.
+    let subId = catToSub.get(catKey);
+    if (!subId) {
+      try {
+        const createdSub = await prisma.subCategory.create({
+          data: { categoryId: catId, name: category, status: true },
+        });
+        subId = createdSub.id;
+        catToSub.set(catKey, subId);
+      } catch {
+        errors.push({ row: n, message: `Could not resolve a sub-category for "${category}".` });
+        continue;
+      }
     }
     if (usedSkus.has(sku.toLowerCase())) {
       errors.push({ row: n, message: `Duplicate SKU "${sku}" within the file.` });

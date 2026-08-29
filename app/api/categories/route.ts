@@ -40,6 +40,14 @@ export async function POST(req: NextRequest) {
         hsnCode, gst: gst ? parseInt(gst) : null,
       },
     });
+
+    // Sub-categories are auto-managed (one per category): create a matching one
+    // so products attach to this category without the admin picking a
+    // sub-category. (Sub-categories are hidden from the UI.)
+    await prisma.subCategory
+      .create({ data: { categoryId: category.id, name, status: true } })
+      .catch(() => {});
+
     void revalidateStorefront(["categories", "products"]);
     return NextResponse.json(category, { status: 201 });
   } catch (error: any) {

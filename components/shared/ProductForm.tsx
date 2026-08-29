@@ -44,7 +44,7 @@ export default function ProductForm({ initial = {}, mode }: Props) {
   const [loading,          setLoading]          = useState(false);
   const [serverError,      setServerError]      = useState("");
   const [categories,       setCategories]       = useState<any[]>([]);
-  const [subcategories,    setSubcategories]    = useState<any[]>([]);
+  // Sub-categories are auto-managed (one per category) — no separate dropdown.
   // On edit, seed from the product's parent category so the category dropdown
   // shows the saved value and the subcategory list loads + pre-selects.
   const [selectedCategory, setSelectedCategory] = useState(
@@ -103,10 +103,16 @@ export default function ProductForm({ initial = {}, mode }: Props) {
   }, []);
 
   useEffect(() => {
-    if (selectedCategory) {
-      fetch(`/api/subcategories?categoryId=${selectedCategory}`)
-        .then((r) => r.json()).then(setSubcategories);
-    }
+    if (!selectedCategory) return;
+    fetch(`/api/subcategories?categoryId=${selectedCategory}`)
+      .then((r) => r.json())
+      .then((subs) => {
+        // Assign the category's sub-category behind the scenes so the admin
+        // only picks a category (sub-categories are auto-managed, one per cat).
+        if (Array.isArray(subs) && subs.length) {
+          setForm((f) => ({ ...f, subcategoryId: String(subs[0].id) }));
+        }
+      });
   }, [selectedCategory]);
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) {
@@ -225,26 +231,15 @@ export default function ProductForm({ initial = {}, mode }: Props) {
         <div className="bg-surface rounded-2xl border border-gray-200 p-6 space-y-4">
           <h2 className="font-semibold text-gray-900 text-sm">Basic Information</h2>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1.5">Category <span className="text-red-500">*</span></label>
-              <select value={selectedCategory}
-                onChange={(e) => setSelectedCategory(e.target.value)}
-                className={selectClass()}>
-                <option value="">Select category</option>
-                {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1.5">Sub Category <span className="text-red-500">*</span></label>
-              <select name="subcategoryId" value={form.subcategoryId}
-                onChange={handleChange} onBlur={handleBlur}
-                className={selectClass(er("subcategoryId"), t("subcategoryId"))}>
-                <option value="">Select subcategory</option>
-                {subcategories.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-              </select>
-              {t("subcategoryId") && er("subcategoryId") && <p className="text-xs text-red-500 mt-1">⚠ {er("subcategoryId")}</p>}
-            </div>
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-1.5">Category <span className="text-red-500">*</span></label>
+            <select value={selectedCategory}
+              onChange={(e) => setSelectedCategory(e.target.value)}
+              className={selectClass(er("subcategoryId"), t("subcategoryId"))}>
+              <option value="">Select category</option>
+              {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
+            {t("subcategoryId") && er("subcategoryId") && <p className="text-xs text-red-500 mt-1">⚠ Please select a category</p>}
           </div>
 
           <div className="grid grid-cols-2 gap-4">

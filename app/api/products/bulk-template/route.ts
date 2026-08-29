@@ -10,7 +10,6 @@ export const COLUMNS = [
   "Product Name", // required
   "SKU", // required (unique)
   "Category", // required (must already exist)
-  "Subcategory", // required (must already exist under the category)
   "Price", // number; blank = "Request a Quote"
   "Stock", // number
   "Short Description",
@@ -41,7 +40,6 @@ export async function GET() {
     "Ceramic Coffee Mug",
     "MUG-001",
     "Drinkware",
-    "Drinkware",
     499,
     100,
     "A 350ml ceramic mug.",
@@ -59,8 +57,8 @@ export async function GET() {
     "How to use this template:",
     "",
     "1. Fill one product per row on the 'Products' sheet (remove the example row).",
-    "2. Required columns: Product Name, SKU, Category, Subcategory.",
-    "3. Category & Subcategory must already exist in the CRM (create them first if needed).",
+    "2. Required columns: Product Name, SKU, Category.",
+    "3. Category must already exist in the CRM (create it first if needed).",
     "4. SKU must be unique across all products.",
     "5. Price: a number (e.g. 499). Leave blank for quote-only products.",
     "6. Gift Mode: one of both / corporate / personal (defaults to both).",

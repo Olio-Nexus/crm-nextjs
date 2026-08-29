@@ -36,7 +36,9 @@ const navGroups = [
     items: [
       { href: "/products", label: "Products", icon: Package },
       { href: "/categories", label: "Categories", icon: Layers },
-      { href: "/categories/sub", label: "Sub Categories", icon: Layers },
+      // Sub Categories — hidden: they're auto-managed (one per category). Page &
+      // API kept; uncomment to manage them manually again.
+      // { href: "/categories/sub", label: "Sub Categories", icon: Layers },
     ],
   },
   {
