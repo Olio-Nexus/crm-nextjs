@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { prismaErrorResponse } from "@/lib/prisma-error";
 import { revalidateStorefront } from "@/lib/revalidate";
+import { toDirectImageUrl } from "@/lib/images";
 
 export async function GET(req: NextRequest) {
   try {
@@ -89,7 +90,7 @@ export async function POST(req: NextRequest) {
       data: {
         subcategoryId: parseInt(subcategoryId),
         productName, urlSlug, productId,
-        images: images ?? [],
+        images: Array.isArray(images) ? images.map(toDirectImageUrl) : [],
         shortDescription, description, altTag,
         metaTitle, metaDescription, metaKeywords, productSchema,
         isFeatured: isFeatured ?? false,

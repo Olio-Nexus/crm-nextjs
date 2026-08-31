@@ -3,6 +3,7 @@ import ExcelJS from "exceljs";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { slugify } from "@/lib/utils";
+import { toDirectImageUrl } from "@/lib/images";
 
 /**
  * POST /api/products/bulk-upload — accepts a filled copy of the bulk-template
@@ -136,7 +137,11 @@ export async function POST(req: NextRequest) {
     const gm = get(row, "Gift Mode").toLowerCase();
     const giftMode = ["both", "corporate", "personal"].includes(gm) ? gm : "both";
     const occasions = get(row, "Occasions").split(",").map((s) => s.trim()).filter(Boolean);
-    const images = get(row, "Image URLs").split(",").map((s) => s.trim()).filter(Boolean);
+    const images = get(row, "Image URLs")
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .map(toDirectImageUrl); // rewrite Google Drive links to direct image URLs
     const status = get(row, "Status").toLowerCase() === "active";
     const shortDesc = get(row, "Short Description");
     const desc = get(row, "Description");

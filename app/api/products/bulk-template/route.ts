@@ -99,9 +99,9 @@ export async function GET() {
     "5. SKU must be unique across all products.",
     "6. Price: a number (e.g. 499). Leave blank for quote-only products.",
     "7. Occasions: comma-separate values from the 'Valid Occasions' sheet.",
-    "8. Image URLs: DIRECT links to the image file (ending in .jpg/.png/.webp) that",
-    "   open the image itself in a browser. Google Drive / Dropbox 'share' links or",
-    "   web-page links will NOT work (they show a page, not the image).",
+    "8. Image URLs: a direct image link (ending in .jpg/.png/.webp), OR a Google",
+    "   Drive share link — Drive links are converted automatically, but the file",
+    "   MUST be shared as 'Anyone with the link'. Other web-page links won't work.",
     "9. Rating (0–5), Review Count (number), Delivery Timeline & Badge are optional.",
     "10. Save and upload via Products → Bulk Upload.",
   ].forEach((line) => notes.addRow([line]));
