@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { canAccessTab } from "@/lib/tabs";
 import {
   LayoutDashboard, Package, Users,
   BarChart2, Image, Settings,
@@ -80,9 +81,13 @@ const navGroups = [
 export default function Sidebar({
   mobileOpen = false,
   onClose,
+  role,
+  allowedTabs,
 }: {
   mobileOpen?: boolean;
   onClose?: () => void;
+  role?: string;
+  allowedTabs?: string[];
 }) {
   const pathname = usePathname();
 
@@ -119,14 +124,19 @@ export default function Sidebar({
 
         {/* Nav */}
         <nav className="flex-1 overflow-y-auto py-3 space-y-0.5 px-2">
-          {navGroups.map((group, gi) => (
+          {navGroups.map((group, gi) => {
+            const items = group.items.filter((item) =>
+              canAccessTab(item.href, role, allowedTabs),
+            );
+            if (items.length === 0) return null;
+            return (
             <div key={gi} className="mb-2">
               {group.label && (
                 <p className="px-2 pt-3 pb-1 text-xs font-semibold text-gray-400 uppercase tracking-wider">
                   {group.label}
                 </p>
               )}
-              {group.items.map((item) => {
+              {items.map((item) => {
                 const Icon = item.icon;
                 const active = pathname === item.href ||
                   (item.href !== "/dashboard" && pathname.startsWith(item.href));
@@ -148,7 +158,8 @@ export default function Sidebar({
                 );
               })}
             </div>
-          ))}
+            );
+          })}
         </nav>
       </aside>
     </>

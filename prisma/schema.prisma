@@ -25,6 +25,9 @@ model User {
   password        String
   rememberToken   String?
   role            UserRole  @default(STAFF)
+  /// Which CRM tabs this user may access (hrefs). Empty = all tabs (default);
+  /// SUPER_ADMIN always sees everything regardless of this list.
+  allowedTabs     String[]
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
