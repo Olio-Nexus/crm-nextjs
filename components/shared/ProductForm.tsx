@@ -83,6 +83,9 @@ export default function ProductForm({ initial = {}, mode }: Props) {
     status:          initial.status          ?? false,
     isNew:           initial.isNew           ?? false,
     isBestSeller:    initial.isBestSeller    ?? false,
+    // "Trending" per storefront mode → home Most Loved + Bestsellers page.
+    trendingCorporate: (initial.trendingModes ?? []).includes("corporate"),
+    trendingPersonal:  (initial.trendingModes ?? []).includes("personal"),
     personalizationEnabled: initial.personalizationEnabled ?? false,
     personalizationPrice:   initial.personalizationPrice?.toString() ?? "",
     // Storefront merchandising
@@ -191,6 +194,10 @@ export default function ProductForm({ initial = {}, mode }: Props) {
         ...form,
         occasions: form.occasions.split(",").map((s) => s.trim()).filter(Boolean),
         recipients: form.recipients.split(",").map((s) => s.trim()).filter(Boolean),
+        trendingModes: [
+          form.trendingCorporate ? "corporate" : null,
+          form.trendingPersonal ? "personal" : null,
+        ].filter(Boolean),
         images: form.images.split("\n").map((s) => s.trim()).filter(Boolean),
         variations,
       }),
@@ -286,6 +293,8 @@ export default function ProductForm({ initial = {}, mode }: Props) {
               { name: "status",      label: "Active"      },
               { name: "isNew",       label: "New Arrival" },
               { name: "isBestSeller",label: "Best Seller" },
+              { name: "trendingCorporate", label: "Trending — Corporate" },
+              { name: "trendingPersonal",  label: "Trending — Personal"  },
             ].map((f) => (
               <label key={f.name} className="flex items-center gap-2 cursor-pointer">
                 <input type="checkbox" name={f.name} checked={(form as any)[f.name]}

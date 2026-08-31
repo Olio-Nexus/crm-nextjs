@@ -137,6 +137,9 @@ export default function BannersPage() {
           <h2 className="font-semibold text-gray-900">{editing ? "Edit Banner" : "New Banner"}</h2>
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-1.5">Banner Image URL *</label>
+            <p className="text-xs text-gray-500 mb-1.5">
+              Recommended size: <strong>1920 × 800 px</strong> (wide landscape, 12:5). JPG or PNG, under 25&nbsp;MB. Keep key visuals slightly right-of-centre — text sits on the left.
+            </p>
             <input value={form.bannerImg} onChange={(e) => setForm({ ...form, bannerImg: e.target.value })}
               className={INPUT} placeholder="https://your-cdn.com/banner.jpg" />
             <div className="mt-2">

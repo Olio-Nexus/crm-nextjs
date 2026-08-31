@@ -88,6 +88,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
           giftMode: body.giftMode || "both",
           occasions: Array.isArray(body.occasions) ? body.occasions : [],
           recipients: Array.isArray(body.recipients) ? body.recipients : [],
+          trendingModes: Array.isArray(body.trendingModes) ? body.trendingModes : [],
           hamperTier: body.hamperTier || null,
           rating:
             body.rating === "" || body.rating == null ? null : parseFloat(body.rating),

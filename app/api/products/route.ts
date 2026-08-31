@@ -15,7 +15,16 @@ export async function GET(req: NextRequest) {
     const subcategoryId = searchParams.get("subcategoryId");
 
     const where: any = {};
-    if (search) where.productName = { contains: search, mode: "insensitive" };
+    if (search) {
+      const q = search.trim();
+      where.OR = [
+        { productName: { contains: q, mode: "insensitive" } },
+        { productId: { contains: q, mode: "insensitive" } }, // SKU
+        { subcategory: { name: { contains: q, mode: "insensitive" } } },
+        { subcategory: { category: { name: { contains: q, mode: "insensitive" } } } }, // Category
+        { variations: { some: { sku: { contains: q, mode: "insensitive" } } } }, // variation SKU
+      ];
+    }
     if (status !== null && status !== "") where.status = status === "true";
     if (subcategoryId) where.subcategoryId = parseInt(subcategoryId);
 
@@ -105,6 +114,7 @@ export async function POST(req: NextRequest) {
         giftMode: body.giftMode || "both",
         occasions: Array.isArray(body.occasions) ? body.occasions : [],
         recipients: Array.isArray(body.recipients) ? body.recipients : [],
+        trendingModes: Array.isArray(body.trendingModes) ? body.trendingModes : [],
         hamperTier: body.hamperTier || null,
         rating:
           body.rating === "" || body.rating == null ? null : parseFloat(body.rating),
