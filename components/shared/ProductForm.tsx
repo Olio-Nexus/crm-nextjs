@@ -424,11 +424,13 @@ export default function ProductForm({ initial = {}, mode }: Props) {
               <label className="block text-sm font-semibold text-gray-700 mb-1.5">Rating (0-5)</label>
               <input type="number" name="rating" min="0" max="5" step="0.1" value={form.rating}
                 onChange={handleChange} className={inputClass()} placeholder="4.5" />
+              <p className="mt-1 text-xs text-gray-500">Shown as the product's star rating; used by the storefront's <strong>“Top Rated”</strong> sort.</p>
             </div>
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-1.5">Review Count</label>
               <input type="number" name="reviewCount" min="0" value={form.reviewCount}
                 onChange={handleChange} className={inputClass()} placeholder="256" />
+              <p className="mt-1 text-xs text-gray-500">The number of reviews shown on the card; used by the storefront's <strong>“Most Popular”</strong> sort (higher = shown first).</p>
             </div>
           </div>
 
