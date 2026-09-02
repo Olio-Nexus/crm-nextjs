@@ -40,10 +40,25 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     }),
   ],
   callbacks: {
-    jwt({ token, user }) {
+    async jwt({ token, user }) {
       if (user) {
+        // Fresh sign-in — trust what authorize() just returned.
         token.id   = user.id;
         token.role = (user as any).role;
+        return token;
+      }
+      // Every later request: re-check the account against the DB. Because
+      // sessions are stateless JWTs, this is what makes account changes take
+      // effect on an *active* session — deleting a user invalidates their
+      // session on their next request (return null), and a role change is
+      // picked up live.
+      if (token.id) {
+        const u = await prisma.user.findUnique({
+          where: { id: Number(token.id) },
+          select: { role: true },
+        });
+        if (!u) return null; // account gone → sign them out
+        token.role = u.role;
       }
       return token;
     },
