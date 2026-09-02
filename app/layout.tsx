@@ -13,6 +13,22 @@ const monaSans = Mona_Sans({
 export const metadata: Metadata = {
   title: "Plattera CRM",
   description: "Plattera e-commerce CRM admin panel",
+  icons: {
+    // Same theme-aware favicon as the storefront; favicon.ico stays the fallback.
+    icon: [
+      {
+        url: "/favicon-light.png",
+        media: "(prefers-color-scheme: light)",
+        type: "image/png",
+      },
+      {
+        url: "/favicon-dark.png",
+        media: "(prefers-color-scheme: dark)",
+        type: "image/png",
+      },
+    ],
+    apple: "/favicon-light.png",
+  },
 };
 
 /**
