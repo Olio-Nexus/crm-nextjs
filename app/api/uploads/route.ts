@@ -29,17 +29,24 @@ export async function POST(req: NextRequest) {
     const form = await req.formData();
     const file = form.get("file");
     const folder = (form.get("folder")?.toString() || "products").toLowerCase();
+    // PDFs are accepted only when the caller explicitly opts in (e.g. a banner
+    // button that opens a catalogue). Image fields stay image-only.
+    const allowPdf = form.get("allowPdf") === "1";
 
     if (!(file instanceof File))
       return NextResponse.json({ error: "No file provided" }, { status: 400 });
     if (file.size > MAX_UPLOAD_BYTES)
       return NextResponse.json(
-        { error: "File too large (max 10 MB)" },
+        { error: "File too large (max 25 MB)" },
         { status: 413 },
       );
-    if (!isAllowedType(file.type))
+    if (!isAllowedType(file.type, allowPdf))
       return NextResponse.json(
-        { error: "Unsupported file type (PNG, JPG, WEBP or GIF)" },
+        {
+          error: allowPdf
+            ? "Unsupported file type (PNG, JPG, WEBP, GIF or PDF)"
+            : "Unsupported file type (PNG, JPG, WEBP or GIF)",
+        },
         { status: 415 },
       );
 

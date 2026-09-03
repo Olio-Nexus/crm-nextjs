@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Plus, Trash2, Pencil, Image, Check, X, ChevronUp, ChevronDown } from "lucide-react";
 import { ImageUpload } from "@/components/shared/ImageUpload";
+import { FileUpload } from "@/components/shared/FileUpload";
 
 interface Banner {
   id: number;
@@ -171,6 +172,24 @@ export default function BannersPage() {
               <label className="block text-sm font-semibold text-gray-700 mb-1.5">Button Link</label>
               <input value={form.btnLink} onChange={(e) => setForm({ ...form, btnLink: e.target.value })}
                 className={INPUT} placeholder="/products or /category/hampers" />
+              <p className="text-xs text-gray-500 mt-1.5">
+                An internal path (e.g. <code>/products</code>), a full web link, or upload a PDF
+                (e.g. a catalogue) — the button opens it in a new tab. To change the PDF later,
+                just upload a new one here.
+              </p>
+              <div className="mt-1.5 flex items-center gap-3">
+                <FileUpload
+                  folder="banners"
+                  label="Upload PDF"
+                  onUploaded={(url) => setForm({ ...form, btnLink: url })}
+                />
+                {form.btnLink && /\.pdf(\?|$)/i.test(form.btnLink) && (
+                  <a href={form.btnLink} target="_blank" rel="noopener noreferrer"
+                    className="text-xs font-medium text-brand-600 hover:underline">
+                    ✓ PDF attached — preview
+                  </a>
+                )}
+              </div>
             </div>
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-1.5">Show In</label>
