@@ -1,5 +1,3 @@
-import { OTP_TTL_MINUTES } from "@/lib/customer-auth";
-
 /**
  * SMS delivery via MSG91 (India, DLT-registered). We generate and verify the
  * OTP ourselves (see the mobile request/verify routes) — MSG91 only delivers the
@@ -11,14 +9,18 @@ import { OTP_TTL_MINUTES } from "@/lib/customer-auth";
 const AUTH_KEY = process.env.MSG91_AUTH_KEY;
 const TEMPLATE_ID = process.env.MSG91_TEMPLATE_ID;
 const SENDER_ID = process.env.MSG91_SENDER_ID;
+// The OTP variable name in the DLT/MSG91 template. Ours is `{#num#}` → "num".
+const OTP_VAR = process.env.MSG91_OTP_VAR || "num";
 
 export const msg91Configured = Boolean(AUTH_KEY && TEMPLATE_ID);
 
 /**
- * Send a 6-digit OTP to a 10-digit Indian mobile via MSG91's OTP API (our own
- * `otp` value fills the template's OTP variable). Best-effort: never throws;
- * returns { delivered:false } and logs when not configured or on failure, so the
- * OTP is still recoverable from the server logs during setup.
+ * Send a 6-digit OTP to a 10-digit Indian mobile via MSG91's Flow API, filling
+ * the DLT-approved template's variable (`num`) with our code — so the delivered
+ * content exactly matches the approved template (the OTP API produced a content
+ * mismatch → DLT error 400). Best-effort: never throws; returns
+ * { delivered:false } and logs when not configured or on failure, so the OTP is
+ * still recoverable from the server logs during setup.
  */
 export async function sendMobileOtp(
   mobile10: string,
@@ -29,18 +31,20 @@ export async function sendMobileOtp(
     return { delivered: false };
   }
 
-  const url = new URL("https://control.msg91.com/api/v5/otp");
-  url.searchParams.set("template_id", TEMPLATE_ID!);
-  url.searchParams.set("mobile", `91${mobile10}`);
-  url.searchParams.set("otp", code);
-  url.searchParams.set("otp_expiry", String(OTP_TTL_MINUTES));
-  if (SENDER_ID) url.searchParams.set("sender", SENDER_ID);
-
   try {
-    const res = await fetch(url.toString(), {
+    const res = await fetch("https://control.msg91.com/api/v5/flow/", {
       method: "POST",
-      headers: { authkey: AUTH_KEY!, "Content-Type": "application/json" },
-      body: JSON.stringify({}),
+      headers: {
+        authkey: AUTH_KEY!,
+        "Content-Type": "application/json",
+        accept: "application/json",
+      },
+      body: JSON.stringify({
+        template_id: TEMPLATE_ID,
+        ...(SENDER_ID ? { sender: SENDER_ID } : {}),
+        short_url: "0",
+        recipients: [{ mobiles: `91${mobile10}`, [OTP_VAR]: code }],
+      }),
     });
     const data = (await res.json().catch(() => null)) as { type?: string; message?: string } | null;
     if (!res.ok || data?.type === "error") {
