@@ -155,9 +155,75 @@ export async function notifyNewLead(input: {
       `</div>`;
 
     await sendMail({ to: leadRecipients(input.channel), subject, text, html });
+
+    // In-app bell notification for the admin.
+    await createAdminNotification({
+      type: "lead",
+      title: `New ${input.kind}`,
+      body:
+        [input.name, input.email, input.phone].filter(Boolean).join(" · ") || null,
+      link: input.channel === "career" ? "/careers" : "/enquiries",
+    });
   } catch (e) {
     // Never let a notification failure break the submission.
     console.warn(`[notifyNewLead] failed: ${String(e)}`);
+  }
+}
+
+/** Create an in-app admin notification (the Header bell). Never throws. */
+export async function createAdminNotification(input: {
+  type: "order" | "lead";
+  title: string;
+  body?: string | null;
+  link?: string | null;
+}): Promise<void> {
+  try {
+    await prisma.notification.create({
+      data: {
+        type: input.type,
+        title: input.title,
+        body: input.body ?? null,
+        link: input.link ?? null,
+      },
+    });
+  } catch (e) {
+    console.warn(`[createAdminNotification] failed: ${String(e)}`);
+  }
+}
+
+/**
+ * Notify the admin of a new paid order — an in-app bell notification plus an
+ * email to the sales inbox. Fire-and-forget: never throws, so a hiccup can't
+ * affect order finalization.
+ */
+export async function notifyNewOrder(orderId: number): Promise<void> {
+  try {
+    const o = await prisma.orderMaster.findUnique({
+      where: { id: orderId },
+      select: { id: true, orderNumber: true, custName: true, grandtotal: true },
+    });
+    if (!o) return;
+    const amount = `₹${Number(o.grandtotal).toLocaleString("en-IN")}`;
+
+    await createAdminNotification({
+      type: "order",
+      title: `New order ${o.orderNumber}`,
+      body: `${amount}${o.custName ? ` · ${o.custName}` : ""}`,
+      link: `/orders/${o.id}`,
+    });
+
+    const subject = `New order ${o.orderNumber} — ${amount}`;
+    const text =
+      `A new order was placed on the Plattera storefront.\n\n` +
+      `Order: ${o.orderNumber}\n` +
+      `Customer: ${o.custName ?? "-"}\n` +
+      `Total: ${amount}\n\n` +
+      `View it in the CRM → Orders.`;
+    // "order" isn't in LEAD_RECIPIENTS → defaults to the contact inbox (or the
+    // LEADS_NOTIFY_TO override), which is the desired sales/ops destination.
+    await sendMail({ to: leadRecipients("order"), subject, text });
+  } catch (e) {
+    console.warn(`[notifyNewOrder] failed: ${String(e)}`);
   }
 }
 

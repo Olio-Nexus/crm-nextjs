@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import {
-  ArrowLeft, Package, MapPin, CreditCard, User,
+  ArrowLeft, Package, MapPin, CreditCard, User, Sparkles, Printer,
   ChevronRight, AlertCircle, CheckCircle2, Truck,
   XCircle, RefreshCw, Clock, ChevronDown,
 } from "lucide-react";
@@ -118,29 +118,55 @@ export default function OrderDetailPage() {
   const isRefunded   = order.orderStatus === "REFUNDED";
   const StatusIcon   = STATUS_ICONS[order.orderStatus];
 
+  // Multi-address orders carry a per-line ship-to. Collect the DISTINCT recipient
+  // addresses so the Delivery Address panel can list all of them (not just the
+  // primary one on the OrderMaster).
+  const shipTos = (order.orderDetails ?? [])
+    .filter((d: any) => d.deliveryName)
+    .map((d: any) => ({
+      name: d.deliveryName as string,
+      phone: (d.deliveryPhone as string) || "",
+      line: [d.deliveryStreet, d.deliveryLandmarks, d.deliveryCity, d.deliveryState, d.deliveryPincode]
+        .filter(Boolean)
+        .join(", "),
+    }));
+  const uniqueShipTos = Array.from(
+    new Map(shipTos.map((s: any) => [`${s.name}|${s.line}`, s])).values(),
+  ) as { name: string; phone: string; line: string }[];
+  const isMultiAddress = uniqueShipTos.length > 0;
+
   return (
     <div className="max-w-6xl space-y-5 pb-12">
 
       {/* ════ HEADER ════ */}
-      <div className="flex items-start gap-3">
-        <Link href="/orders"
-          className="mt-1 p-2 rounded-xl hover:bg-surface hover:shadow-sm border border-transparent hover:border-gray-200 text-gray-400 transition-all">
-          <ArrowLeft size={17} />
-        </Link>
-        <div>
-          <div className="flex flex-wrap items-center gap-2.5">
-            <h1 className="text-2xl font-bold text-gray-900">
-              Order <span className="text-brand-600 font-mono">#{order.orderNumber}</span>
-            </h1>
-            <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${ORDER_STATUS_COLORS[order.orderStatus as OrderStatus]}`}>
-              {StatusIcon && <StatusIcon size={11} />}
-              {ORDER_STATUS_LABELS[order.orderStatus as OrderStatus]}
-            </span>
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-start gap-3">
+          <Link href="/orders"
+            className="mt-1 p-2 rounded-xl hover:bg-surface hover:shadow-sm border border-transparent hover:border-gray-200 text-gray-400 transition-all">
+            <ArrowLeft size={17} />
+          </Link>
+          <div>
+            <div className="flex flex-wrap items-center gap-2.5">
+              <h1 className="text-2xl font-bold text-gray-900">
+                Order <span className="text-brand-600 font-mono">#{order.orderNumber}</span>
+              </h1>
+              <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${ORDER_STATUS_COLORS[order.orderStatus as OrderStatus]}`}>
+                {StatusIcon && <StatusIcon size={11} />}
+                {ORDER_STATUS_LABELS[order.orderStatus as OrderStatus]}
+              </span>
+            </div>
+            <p className="text-sm text-gray-400 mt-1">
+              Placed on {formatDateTime(order.orderDate)}
+            </p>
           </div>
-          <p className="text-sm text-gray-400 mt-1">
-            Placed on {formatDateTime(order.orderDate)}
-          </p>
         </div>
+        <Link
+          href={`/orders/${order.id}/invoice`}
+          target="_blank"
+          className="mt-1 inline-flex shrink-0 items-center gap-2 rounded-xl border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-surface"
+        >
+          <Printer size={15} /> Invoice
+        </Link>
       </div>
 
       {/* ════ ALERTS ════ */}
@@ -283,6 +309,63 @@ export default function OrderDetailPage() {
                       <span className="text-gray-200">·</span>
                       <span className="text-xs text-gray-400">Sub# {item.subOrderNumber}</span>
                     </div>
+
+                    {item.deliveryName && (
+                      <p className="mt-1.5 flex items-start gap-1 text-xs text-gray-500">
+                        <MapPin size={12} className="mt-0.5 shrink-0 text-gray-400" />
+                        <span>
+                          Ship to{" "}
+                          <span className="font-medium text-gray-700">{item.deliveryName}</span>
+                          {item.deliveryPhone ? ` · ${item.deliveryPhone}` : ""} —{" "}
+                          {[item.deliveryStreet, item.deliveryCity, item.deliveryState, item.deliveryPincode]
+                            .filter(Boolean)
+                            .join(", ")}
+                        </span>
+                      </p>
+                    )}
+
+                    {/* Personalisation the customer selected on the storefront —
+                        the order-processing team needs the exact text/font/image. */}
+                    {item.attributes?.personalization &&
+                      (item.attributes.personalization.text ||
+                        item.attributes.personalization.font ||
+                        item.attributes.personalization.image) && (
+                        <div className="mt-2 rounded-lg border border-brand-200 bg-brand-50 px-3 py-2">
+                          <p className="flex items-center gap-1 text-xs font-semibold text-brand-700">
+                            <Sparkles size={12} /> Personalisation
+                          </p>
+                          <div className="mt-1 space-y-0.5 text-xs text-gray-600">
+                            {item.attributes.personalization.text && (
+                              <p>
+                                Text:{" "}
+                                <span className="font-medium text-gray-900">
+                                  &ldquo;{item.attributes.personalization.text}&rdquo;
+                                </span>
+                              </p>
+                            )}
+                            {item.attributes.personalization.font && (
+                              <p>
+                                Font:{" "}
+                                <span className="font-medium text-gray-900">
+                                  {item.attributes.personalization.font}
+                                </span>
+                              </p>
+                            )}
+                            {item.attributes.personalization.image && (
+                              <p>
+                                <a
+                                  href={item.attributes.personalization.image}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-brand-600 hover:underline"
+                                >
+                                  View uploaded image
+                                </a>
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      )}
                     <div className="flex flex-wrap items-center gap-3 mt-2.5">
                       <div className="flex items-center gap-1.5 bg-gray-50 px-2.5 py-1 rounded-lg">
                         <span className="text-xs text-gray-500">Qty</span>
@@ -383,24 +466,52 @@ export default function OrderDetailPage() {
               <div className="w-8 h-8 bg-emerald-50 rounded-xl flex items-center justify-center">
                 <MapPin size={15} className="text-emerald-600" />
               </div>
-              <h2 className="font-semibold text-gray-900 text-sm">Delivery Address</h2>
-            </div>
-            <div className="space-y-1 text-sm text-gray-600 leading-relaxed">
-              <p className="font-semibold text-gray-800">{order.streetAddress}</p>
-              {order.landmarks && <p className="text-gray-400 text-xs">{order.landmarks}</p>}
-              <p>{order.city}, {order.state}</p>
-              <p className="text-gray-500">{order.country}</p>
-              <div className="flex items-center gap-2 pt-1">
-                <span className="px-2 py-0.5 bg-gray-100 text-gray-600 rounded-md text-xs font-mono">
-                  {order.pincode}
+              <h2 className="font-semibold text-gray-900 text-sm">
+                {isMultiAddress ? "Delivery Addresses" : "Delivery Address"}
+              </h2>
+              {isMultiAddress && (
+                <span className="ml-auto px-2 py-0.5 bg-emerald-50 text-emerald-700 rounded-md text-xs font-medium">
+                  {uniqueShipTos.length} destinations
                 </span>
-                {order.addressType && (
-                  <span className="px-2 py-0.5 bg-brand-50 text-brand-600 rounded-md text-xs capitalize font-medium">
-                    {order.addressType}
-                  </span>
-                )}
-              </div>
+              )}
             </div>
+
+            {isMultiAddress ? (
+              <div className="space-y-3">
+                <p className="text-xs text-gray-400">
+                  This order ships to multiple addresses — see each item for what goes where.
+                </p>
+                {uniqueShipTos.map((s, i) => (
+                  <div
+                    key={`${s.name}-${i}`}
+                    className="rounded-xl border border-gray-200 p-3 text-sm text-gray-600 leading-relaxed"
+                  >
+                    <p className="font-semibold text-gray-800">
+                      {s.name}
+                      {s.phone && <span className="ml-2 text-xs font-normal text-gray-400">{s.phone}</span>}
+                    </p>
+                    <p>{s.line}</p>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="space-y-1 text-sm text-gray-600 leading-relaxed">
+                <p className="font-semibold text-gray-800">{order.streetAddress}</p>
+                {order.landmarks && <p className="text-gray-400 text-xs">{order.landmarks}</p>}
+                <p>{order.city}, {order.state}</p>
+                <p className="text-gray-500">{order.country}</p>
+                <div className="flex items-center gap-2 pt-1">
+                  <span className="px-2 py-0.5 bg-gray-100 text-gray-600 rounded-md text-xs font-mono">
+                    {order.pincode}
+                  </span>
+                  {order.addressType && (
+                    <span className="px-2 py-0.5 bg-brand-50 text-brand-600 rounded-md text-xs capitalize font-medium">
+                      {order.addressType}
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Payment */}

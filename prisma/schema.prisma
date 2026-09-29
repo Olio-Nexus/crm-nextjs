@@ -452,6 +452,23 @@ model NotificationLog {
   @@map("notification_logs")
 }
 
+/// In-app admin notifications (the Header bell). One row per new order/lead;
+/// `link` points to the relevant CRM page. Distinct from NotificationLog
+/// (an email send-log) and NotificationTemplate (email/SMS templates).
+model Notification {
+  id        Int      @id @default(autoincrement())
+  type      String // "order" | "lead"
+  title     String
+  body      String?
+  link      String?
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([isRead])
+  @@index([createdAt])
+  @@map("notifications")
+}
+
 model ProductVariation {
   id             Int      @id @default(autoincrement())
   productId      Int
@@ -656,6 +673,15 @@ model OrderDetail {
   attributes           Json?
   quantity             Int
   subOrderNumber       String
+  // Per-line delivery address for multi-address orders (each split ships to its
+  // own address). Null on single-address orders → ships to the OrderMaster address.
+  deliveryName         String?
+  deliveryPhone        String?
+  deliveryStreet       String?
+  deliveryLandmarks    String?
+  deliveryCity         String?
+  deliveryState        String?
+  deliveryPincode      String?
   weightUnit           String?
   weight               Float?
   dimensionUnit        String?

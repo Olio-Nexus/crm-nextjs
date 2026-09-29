@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Search, Eye, Users, Filter, Download } from "lucide-react";
+import { Search, Eye, Users, Filter, Download, Upload, FileDown, X } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 import { TableLoading } from "@/components/shared/Spinner";
 
@@ -28,6 +28,17 @@ export default function CustomersPage() {
   const [status,    setStatus]    = useState("");
   const [loading,   setLoading]   = useState(true);
 
+  const fileInput = useRef<HTMLInputElement>(null);
+  const [importing, setImporting] = useState(false);
+  const [importResult, setImportResult] = useState<{
+    created: number;
+    updated: number;
+    failed: number;
+    warnings?: { row: number; message: string }[];
+    errors?: { row: number; message: string }[];
+  } | null>(null);
+  const [importError, setImportError] = useState<string | null>(null);
+
   const load = useCallback(async () => {
     setLoading(true);
     const p = new URLSearchParams({ page: String(page), limit: "10" });
@@ -46,6 +57,29 @@ export default function CustomersPage() {
     return () => clearTimeout(t);
   }, [load]);
 
+  async function handleImport(file: File) {
+    setImporting(true);
+    setImportResult(null);
+    setImportError(null);
+    try {
+      const body = new FormData();
+      body.append("file", file);
+      const res = await fetch("/api/customers/import", { method: "POST", body });
+      const data = await res.json();
+      if (!res.ok) {
+        setImportError(data.error ?? "Import failed. Please use the provided template.");
+      } else {
+        setImportResult(data);
+        await load(); // refresh the list with the imported customers
+      }
+    } catch {
+      setImportError("Import failed. Please try again.");
+    } finally {
+      setImporting(false);
+      if (fileInput.current) fileInput.current.value = ""; // allow re-selecting the same file
+    }
+  }
+
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
@@ -53,15 +87,85 @@ export default function CustomersPage() {
           <h1 className="text-xl font-semibold text-gray-900">Customers</h1>
           <p className="text-sm text-gray-500 mt-0.5">{total} registered customers</p>
         </div>
-        {/* File download from an API route — a plain <a> is correct here. */}
-        {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
-        <a
-          href="/api/customers/export"
-          className="flex items-center gap-2 px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white text-sm font-medium rounded-lg transition-colors"
-        >
-          <Download size={16} /> Export to Excel
-        </a>
+        <div className="flex items-center gap-2">
+          {/* Download the import template */}
+          {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
+          <a
+            href="/api/customers/import-template"
+            className="flex items-center gap-2 px-4 py-2 border border-gray-200 hover:bg-gray-50 text-gray-700 text-sm font-medium rounded-lg transition-colors"
+          >
+            <FileDown size={16} /> Template
+          </a>
+          {/* Import filled template */}
+          <input
+            ref={fileInput}
+            type="file"
+            accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            className="hidden"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) handleImport(f);
+            }}
+          />
+          <button
+            type="button"
+            onClick={() => fileInput.current?.click()}
+            disabled={importing}
+            className="flex items-center gap-2 px-4 py-2 border border-brand-600 text-brand-700 hover:bg-brand-50 text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
+          >
+            <Upload size={16} /> {importing ? "Importing…" : "Import from Excel"}
+          </button>
+          {/* File download from an API route — a plain <a> is correct here. */}
+          {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
+          <a
+            href="/api/customers/export"
+            className="flex items-center gap-2 px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white text-sm font-medium rounded-lg transition-colors"
+          >
+            <Download size={16} /> Export to Excel
+          </a>
+        </div>
       </div>
+
+      {/* Import result / error banner */}
+      {importError && (
+        <div className="mb-4 flex items-start justify-between gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+          <span>{importError}</span>
+          <button onClick={() => setImportError(null)} aria-label="Dismiss">
+            <X size={16} />
+          </button>
+        </div>
+      )}
+      {importResult && (
+        <div className="mb-4 rounded-xl border border-gray-200 bg-surface p-4 text-sm">
+          <div className="flex items-start justify-between">
+            <p className="font-semibold text-gray-900">
+              Import complete —{" "}
+              <span className="text-green-700">{importResult.created} created</span>,{" "}
+              <span className="text-brand-700">{importResult.updated} updated</span>
+              {importResult.failed > 0 && (
+                <>, <span className="text-red-700">{importResult.failed} failed</span></>
+              )}
+            </p>
+            <button onClick={() => setImportResult(null)} aria-label="Dismiss">
+              <X size={16} className="text-gray-400" />
+            </button>
+          </div>
+          {!!importResult.warnings?.length && (
+            <ul className="mt-2 list-disc space-y-0.5 pl-5 text-amber-700">
+              {importResult.warnings.map((w, i) => (
+                <li key={i}>Row {w.row}: {w.message}</li>
+              ))}
+            </ul>
+          )}
+          {!!importResult.errors?.length && (
+            <ul className="mt-2 list-disc space-y-0.5 pl-5 text-red-600">
+              {importResult.errors.map((er, i) => (
+                <li key={i}>Row {er.row}: {er.message}</li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
 
       <div className="bg-surface rounded-2xl border border-gray-200 overflow-hidden">
         {/* Filters */}

@@ -292,9 +292,6 @@ export default function ProductForm({ initial = {}, mode }: Props) {
               { name: "isFeatured",  label: "Featured"    },
               { name: "status",      label: "Active"      },
               { name: "isNew",       label: "New Arrival" },
-              { name: "isBestSeller",label: "Best Seller" },
-              { name: "trendingCorporate", label: "Trending — Corporate" },
-              { name: "trendingPersonal",  label: "Trending — Personal"  },
             ].map((f) => (
               <label key={f.name} className="flex items-center gap-2 cursor-pointer">
                 <input type="checkbox" name={f.name} checked={(form as any)[f.name]}
@@ -302,6 +299,28 @@ export default function ProductForm({ initial = {}, mode }: Props) {
                 <span className="text-sm text-gray-700">{f.label}</span>
               </label>
             ))}
+          </div>
+
+          {/* Trending & Bestsellers — an extra label with a per-mode flag. Ticking
+              a mode adds the product to the storefront's "Trending / Best Sellers"
+              for that mode. Also managed centrally at Categories → Trending & Bestsellers. */}
+          <div className="pt-1">
+            <p className="text-sm font-medium text-gray-700 mb-2">Trending &amp; Bestsellers</p>
+            <div className="flex flex-wrap gap-6">
+              {[
+                { name: "trendingCorporate", label: "Corporate" },
+                { name: "trendingPersonal",  label: "Personal"  },
+              ].map((f) => (
+                <label key={f.name} className="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" name={f.name} checked={(form as any)[f.name]}
+                    onChange={handleChange} className="w-4 h-4 accent-brand-600" />
+                  <span className="text-sm text-gray-700">{f.label}</span>
+                </label>
+              ))}
+            </div>
+            <p className="text-xs text-gray-400 mt-1.5">
+              Tick a storefront mode to feature this product under Trending / Best Sellers there.
+            </p>
           </div>
         </div>
 

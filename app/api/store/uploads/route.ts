@@ -6,6 +6,7 @@ import {
   keyFromUrl,
   r2Configured,
   isAllowedType,
+  isDesignFile,
   MAX_UPLOAD_BYTES,
 } from "@/lib/r2";
 
@@ -31,19 +32,25 @@ export async function POST(req: NextRequest) {
         : purpose === "careers"
           ? "careers"
           : "personalization";
-    // Vendor proposals and career resumes may be PDFs; personalization is images.
-    const allowPdf = folder === "vendor" || folder === "careers";
-
     if (!(file instanceof File))
       return storeJson({ error: "No file provided" }, 400);
     if (file.size > MAX_UPLOAD_BYTES)
-      return storeJson({ error: "File too large (max 10 MB)" }, 413);
-    if (!isAllowedType(file.type, allowPdf))
+      return storeJson({ error: "File too large (max 25 MB)" }, 413);
+
+    // Images are always allowed. Personalization (logo/design upload), vendor
+    // proposals and career resumes may also be print-ready design files
+    // (PDF / AI / CDR) — validated by extension, since browsers don't reliably
+    // report a MIME type for .cdr / .ai.
+    const allowDesign =
+      folder === "personalization" || folder === "vendor" || folder === "careers";
+    const ok =
+      isAllowedType(file.type, false) || (allowDesign && isDesignFile(file.name));
+    if (!ok)
       return storeJson(
         {
-          error: allowPdf
-            ? "Unsupported file type (PDF, PNG, JPG or WEBP)"
-            : "Unsupported file type (PNG, JPG, WEBP or GIF)",
+          error: allowDesign
+            ? "Unsupported file. Upload an image, or a PDF / AI / CDR design file."
+            : "Unsupported file type (PNG, JPG, WEBP or GIF).",
         },
         415,
       );

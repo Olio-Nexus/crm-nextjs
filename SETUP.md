@@ -38,7 +38,7 @@ npm run dev
 
 ---
 
-## Database Schema — 20 Tables
+## nv Schema — 20 Tables
 
 | Table | Purpose |
 |---|---|

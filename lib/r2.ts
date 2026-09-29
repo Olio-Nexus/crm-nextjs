@@ -56,6 +56,24 @@ export function isAllowedType(type: string, allowPdf = false): boolean {
   );
 }
 
+/** Extensions we can store; used to validate/name files the browser doesn't give
+ *  a usable MIME type for (e.g. .cdr/.ai report as octet-stream or blank). */
+const UPLOAD_EXTS = new Set([
+  "jpg", "jpeg", "png", "webp", "gif", "pdf", "ai", "cdr",
+]);
+
+/** A safe, allow-listed extension parsed from a filename, or null. */
+export function uploadExtFromName(name?: string): string | null {
+  const e = name?.split(".").pop()?.toLowerCase();
+  return e && UPLOAD_EXTS.has(e) ? e : null;
+}
+
+/** True when a filename is a print-ready design file (PDF / AI / CDR). */
+export function isDesignFile(name?: string): boolean {
+  const e = uploadExtFromName(name);
+  return e === "pdf" || e === "ai" || e === "cdr";
+}
+
 export interface UploadResult {
   url: string;
   key: string;
@@ -68,13 +86,15 @@ export interface UploadResult {
  */
 export async function uploadToR2(
   folder: string,
-  file: { arrayBuffer(): Promise<ArrayBuffer>; type: string },
+  file: { arrayBuffer(): Promise<ArrayBuffer>; type: string; name?: string },
 ): Promise<UploadResult> {
   if (!client || !BUCKET) throw new Error("R2 is not configured");
   if (!PUBLIC_BASE) throw new Error("R2_PUBLIC_BASE_URL is not set");
 
   const safeFolder = folder.replace(/[^a-z0-9-]/gi, "") || "misc";
-  const ext = EXT[file.type] ?? "bin";
+  // Prefer the MIME-derived extension; fall back to the filename for design
+  // files (.cdr/.ai) that browsers don't tag with a usable MIME type.
+  const ext = EXT[file.type] || uploadExtFromName(file.name) || "bin";
   const key = `${safeFolder}/${randomUUID()}.${ext}`;
   const bytes = Buffer.from(await file.arrayBuffer());
 

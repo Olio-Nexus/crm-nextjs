@@ -7,11 +7,14 @@ dotenv.config();
 const prisma = new PrismaClient();
 
 async function main() {
-  const hashedPassword = await bcrypt.hash("admin123", 12);
+  // TEMP (local dev convenience): admin login. Also reset on re-seed so local
+  // login always works. Do NOT run this seed against production — it would reset
+  // the admin password. Rotate this before go-live.
+  const hashedPassword = await bcrypt.hash("admin@123", 12);
 
   await prisma.user.upsert({
     where: { email: "admin@crm.com" },
-    update: {},
+    update: { password: hashedPassword },
     create: {
       name: "Super Admin",
       email: "admin@crm.com",
@@ -59,7 +62,7 @@ async function main() {
   }
 
   console.log("✅ Seed complete");
-  console.log("   Admin: admin@crm.com / admin123");
+  console.log("   Admin: admin@crm.com / admin@123");
 }
 
 main()

@@ -1,8 +1,9 @@
 "use client";
 
 import { signOut } from "next-auth/react";
-import { LogOut, Bell, Menu } from "lucide-react";
+import { LogOut, Menu } from "lucide-react";
 import ThemeToggle from "./ThemeToggle";
+import NotificationBell from "./NotificationBell";
 
 interface Props {
   user?: { name?: string | null; email?: string | null };
@@ -21,9 +22,7 @@ export default function Header({ user, onMenuClick }: Props) {
       </button>
       <div className="flex-1" />
       <ThemeToggle />
-      <button className="p-2 rounded-lg hover:bg-gray-100 text-gray-400 relative">
-        <Bell size={18} />
-      </button>
+      <NotificationBell />
       <div className="flex items-center gap-3">
         <div className="text-right hidden sm:block">
           <p className="text-sm font-medium text-gray-900 leading-none">{user?.name}</p>

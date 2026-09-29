@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Plus, Pencil, Trash2, Search } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, TrendingUp, ChevronRight } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 import { TableLoading } from "@/components/shared/Spinner";
 
@@ -64,6 +64,26 @@ export default function CategoriesPage() {
           New Category
         </Link>
       </div>
+
+      {/* Trending & Bestsellers — a merchandising category managed by product
+          assignment (with a Corporate/Personal flag), not a normal category. */}
+      <Link
+        href="/categories/trending-bestsellers"
+        className="flex items-center justify-between gap-3 mb-5 p-4 rounded-2xl border border-brand-200 bg-brand-50/60 hover:bg-brand-50 transition-colors"
+      >
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-brand-100 flex items-center justify-center">
+            <TrendingUp size={16} className="text-brand-600" />
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-gray-900">Trending &amp; Bestsellers</p>
+            <p className="text-xs text-gray-500">
+              Curate the storefront&rsquo;s &ldquo;Trending / Best Sellers&rdquo; — add products &amp; set Corporate / Personal.
+            </p>
+          </div>
+        </div>
+        <ChevronRight size={18} className="text-brand-500" />
+      </Link>
 
       {/* Search */}
       <div className="bg-surface rounded-xl border border-gray-200 overflow-hidden">

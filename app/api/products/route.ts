@@ -105,7 +105,9 @@ export async function POST(req: NextRequest) {
         isFeatured: isFeatured ?? false,
         status: status ?? false,
         isNew: isNew ?? false,
-        isBestSeller: isBestSeller ?? false,
+        // Bestseller is unified with Trending & Bestsellers — mirror it from the
+        // trending modes so the storefront "Bestseller" badge/sort stay in sync.
+        isBestSeller: Array.isArray(body.trendingModes) && body.trendingModes.length > 0,
         personalizationEnabled: personalizationEnabled ?? false,
         personalizationPrice:
           personalizationPrice === "" || personalizationPrice == null

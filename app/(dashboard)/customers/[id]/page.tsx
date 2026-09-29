@@ -6,7 +6,7 @@ import Link from "next/link";
 import {
   ArrowLeft, User, MapPin, ShoppingBag, RotateCcw,
   Tag, CheckCircle2, XCircle, AlertCircle, Phone,
-  Mail, Calendar, Hash,
+  Mail, Calendar, Hash, Cake, Heart, Save,
 } from "lucide-react";
 import { formatINR, formatDate, formatDateTime } from "@/lib/utils";
 import { ORDER_STATUS_LABELS, ORDER_STATUS_COLORS, OrderStatus } from "@/types";
@@ -18,11 +18,40 @@ export default function CustomerDetailPage() {
   const [toggling,  setToggling]  = useState(false);
   const [success,   setSuccess]   = useState("");
 
+  // Editable occasion dates (power the reminder emails).
+  const [dob,          setDob]          = useState("");
+  const [anniversary,  setAnniversary]  = useState("");
+  const [savingDates,  setSavingDates]  = useState(false);
+
+  const toInputDate = (d: string | null) =>
+    d ? new Date(d).toISOString().split("T")[0] : "";
+
   useEffect(() => {
     fetch(`/api/customers/${id}`)
       .then((r) => r.json())
-      .then((d) => { setCustomer(d); setLoading(false); });
+      .then((d) => {
+        setCustomer(d);
+        setDob(toInputDate(d?.dob ?? null));
+        setAnniversary(toInputDate(d?.anniversary ?? null));
+        setLoading(false);
+      });
   }, [id]);
+
+  async function saveDates() {
+    setSavingDates(true);
+    const res = await fetch(`/api/customers/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ dob, anniversary }),
+    });
+    const data = await res.json();
+    setSavingDates(false);
+    if (res.ok) {
+      setCustomer((p: any) => ({ ...p, dob: data.dob, anniversary: data.anniversary }));
+      setSuccess("Occasion dates saved");
+      setTimeout(() => setSuccess(""), 3000);
+    }
+  }
 
   async function toggleStatus() {
     setToggling(true);
@@ -269,12 +298,6 @@ export default function CustomerDetailPage() {
                   <span className="text-gray-700">{customer.mobileNumber}</span>
                 </div>
               )}
-              {customer.dob && (
-                <div className="flex items-center gap-2.5">
-                  <Calendar size={13} className="text-gray-400 shrink-0" />
-                  <span className="text-gray-700">{formatDate(customer.dob)}</span>
-                </div>
-              )}
               {customer.gender && (
                 <div className="flex items-center gap-2.5">
                   <User size={13} className="text-gray-400 shrink-0" />
@@ -285,6 +308,50 @@ export default function CustomerDetailPage() {
                 <Hash size={13} className="text-gray-400 shrink-0" />
                 <span className="text-gray-500 font-mono text-xs">{customer.uniqueId}</span>
               </div>
+            </div>
+          </div>
+
+          {/* Occasion dates — power the reminder emails; editable by admin */}
+          <div className="bg-surface border border-gray-200 rounded-2xl p-5">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="w-7 h-7 bg-pink-50 rounded-lg flex items-center justify-center">
+                <Calendar size={13} className="text-pink-600" />
+              </div>
+              <h2 className="font-semibold text-gray-900 text-sm">Occasion Dates</h2>
+            </div>
+            <div className="space-y-3">
+              <label className="block">
+                <span className="flex items-center gap-1.5 text-xs font-medium text-gray-500 mb-1">
+                  <Cake size={12} className="text-gray-400" /> Birthday
+                </span>
+                <input
+                  type="date"
+                  value={dob}
+                  onChange={(e) => setDob(e.target.value)}
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500"
+                />
+              </label>
+              <label className="block">
+                <span className="flex items-center gap-1.5 text-xs font-medium text-gray-500 mb-1">
+                  <Heart size={12} className="text-gray-400" /> Anniversary
+                </span>
+                <input
+                  type="date"
+                  value={anniversary}
+                  onChange={(e) => setAnniversary(e.target.value)}
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500"
+                />
+              </label>
+              <button
+                onClick={saveDates}
+                disabled={savingDates}
+                className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold rounded-xl transition-colors disabled:opacity-50"
+              >
+                <Save size={14} /> {savingDates ? "Saving…" : "Save dates"}
+              </button>
+              <p className="text-xs text-gray-400">
+                A reminder email is sent automatically ~{7} days before each date, every year.
+              </p>
             </div>
           </div>
 

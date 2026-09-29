@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Mona_Sans } from "next/font/google";
+import HolyLoader from "holy-loader";
 import "./globals.css";
 import { SessionProvider } from "next-auth/react";
 
@@ -52,6 +53,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
       <body className="antialiased">
+        {/* Global top navigation loader — immediate feedback on every link click. */}
+        <HolyLoader color="#295a4f" height={3} speed={250} easing="ease-out" showSpinner={false} />
         <SessionProvider>{children}</SessionProvider>
       </body>
     </html>

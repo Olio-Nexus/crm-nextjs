@@ -79,7 +79,9 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
           images: Array.isArray(images) ? images.map(toDirectImageUrl) : [],
           shortDescription, description, altTag,
           metaTitle, metaDescription, metaKeywords, productSchema,
-          isFeatured, status, isNew, isBestSeller,
+          isFeatured, status, isNew,
+          // Bestseller mirrors Trending & Bestsellers membership (unified concept).
+          isBestSeller: Array.isArray(body.trendingModes) && body.trendingModes.length > 0,
           personalizationEnabled: personalizationEnabled ?? false,
           personalizationPrice:
             personalizationPrice === "" || personalizationPrice == null

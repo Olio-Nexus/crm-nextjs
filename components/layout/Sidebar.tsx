@@ -8,9 +8,9 @@ import {
   LayoutDashboard, Package, Users,
   BarChart2, Image, Settings,
   X, UserCog, Layers,
-  FileText, Bell, MessageSquare, Inbox, Briefcase, Quote,
-  // Icons for tabs hidden until later (payment/order + Product Tags):
-  // ShoppingBag, RotateCcw, Shield, RefreshCcw, CreditCard, Tag
+  FileText, Bell, MessageSquare, Inbox, Briefcase, Quote, ShoppingBag,
+  // Icons for tabs hidden until later (returns/refunds/payment + Product Tags):
+  // RotateCcw, Shield, RefreshCcw, CreditCard, Tag
 } from "lucide-react";
 
 const navGroups = [
@@ -20,18 +20,18 @@ const navGroups = [
       { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
     ],
   },
-  // Order Management — hidden until checkout/Razorpay is live. Pages & APIs are
-  // kept; uncomment this group (and its icons above) to restore the tabs.
-  // {
-  //   label: "Order Management",
-  //   items: [
-  //     { href: "/orders", label: "Current Orders", icon: ShoppingBag },
-  //     { href: "/orders/past", label: "Past Orders", icon: FileText },
-  //     { href: "/returns", label: "Returns", icon: RotateCcw },
-  //     { href: "/returns/refunds", label: "Refunds", icon: RefreshCcw },
-  //     { href: "/warranties", label: "Warranty Claims", icon: Shield },
-  //   ],
-  // },
+  // Order Management — Orders re-enabled with checkout/Razorpay (Phase 1).
+  // Returns/Refunds/Warranty stay hidden until those flows are wired.
+  {
+    label: "Order Management",
+    items: [
+      { href: "/orders", label: "Current Orders", icon: ShoppingBag },
+      { href: "/orders/past", label: "Past Orders", icon: FileText },
+      // { href: "/returns", label: "Returns", icon: RotateCcw },
+      // { href: "/returns/refunds", label: "Refunds", icon: RefreshCcw },
+      // { href: "/warranties", label: "Warranty Claims", icon: Shield },
+    ],
+  },
   {
     label: "Catalog",
     items: [
