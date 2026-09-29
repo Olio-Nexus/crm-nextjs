@@ -83,3 +83,35 @@ export async function findOrCreateCustomer(email: string) {
   });
   return { customer, isNew: true };
 }
+
+/** Normalize an Indian mobile to 10 digits (strips +91 / 91 / spaces). Null if invalid. */
+export function normalizeMobile(input: string): string | null {
+  const digits = String(input ?? "").replace(/\D/g, "");
+  const ten = digits.length > 10 ? digits.slice(-10) : digits;
+  return /^[6-9]\d{9}$/.test(ten) ? ten : null;
+}
+
+/** OTP-store key for a mobile number — reuses the emailOtp table (no "@", so it
+ *  never collides with a real email). */
+export function mobileOtpKey(mobile10: string): string {
+  return `mobile:${mobile10}`;
+}
+
+/** Find the customer for a verified mobile, or create one. Mobile-only signups
+ *  get a placeholder unique email (the email column is required + unique). */
+export async function findOrCreateCustomerByMobile(mobile10: string) {
+  const existing = await prisma.customer.findUnique({ where: { mobileNumber: mobile10 } });
+  if (existing) return { customer: existing, isNew: false };
+
+  const customer = await prisma.customer.create({
+    data: {
+      name: `Customer ${mobile10.slice(-4)}`,
+      mobileNumber: mobile10,
+      email: `m${mobile10}@mobile.plattera.in`,
+      password: await bcrypt.hash(crypto.randomBytes(32).toString("hex"), 10),
+      uniqueId: crypto.randomUUID(),
+      status: true,
+    },
+  });
+  return { customer, isNew: true };
+}
