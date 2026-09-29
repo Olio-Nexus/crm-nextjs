@@ -8,9 +8,9 @@ import {
   LayoutDashboard, Package, Users,
   BarChart2, Image, Settings,
   X, UserCog, Layers,
-  FileText, Bell, MessageSquare, Inbox, Briefcase, Quote, ShoppingBag,
-  // Icons for tabs hidden until later (returns/refunds/payment + Product Tags):
-  // RotateCcw, Shield, RefreshCcw, CreditCard, Tag
+  FileText, Bell, MessageSquare, Inbox, Briefcase, Quote, ShoppingBag, Tag,
+  // Icons for tabs hidden until later (returns/refunds/payment):
+  // RotateCcw, Shield, RefreshCcw, CreditCard
 } from "lucide-react";
 
 const navGroups = [
@@ -54,8 +54,7 @@ const navGroups = [
     items: [
       { href: "/enquiries", label: "Leads", icon: Inbox },
       { href: "/careers", label: "Careers", icon: Briefcase },
-      // Promo Codes — hidden until checkout/Razorpay is live (kept for later).
-      // { href: "/promocodes", label: "Promo Codes", icon: Tag },
+      { href: "/promocodes", label: "Promo Codes", icon: Tag },
       { href: "/banners", label: "Home Banners", icon: Image },
       { href: "/testimonials", label: "Testimonials", icon: Quote },
       { href: "/blogs", label: "Blogs", icon: FileText },
