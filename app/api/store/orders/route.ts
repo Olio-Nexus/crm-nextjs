@@ -187,7 +187,13 @@ export async function POST(req: NextRequest) {
     let discount = 0;
     let promoResult = null as Awaited<ReturnType<typeof resolvePromo>> | null;
     if (promocode) {
-      promoResult = await resolvePromo(promocode, itemTotal);
+      promoResult = await resolvePromo(promocode, itemTotal, {
+        customerId: customer.id,
+        productIds: cartRows.map((r) => r.productId),
+        subcategoryIds: [
+          ...new Set(cartRows.map((r) => r.product.subcategoryId).filter(Boolean) as number[]),
+        ],
+      });
       if (!promoResult.valid) return storeJson({ error: promoResult.message }, 400);
       discount = Math.round(promoResult.discount);
     }

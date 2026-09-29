@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Save, Tag } from "lucide-react";
@@ -23,6 +23,31 @@ export default function PromoForm({ initial = {}, mode }: Props) {
   const [error,   setError]   = useState("");
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [errors,  setErrors]  = useState<ValidationErrors<any>>({});
+
+  // Scope pickers — which products / categories the coupon is limited to.
+  const [products,   setProducts]   = useState<{ id: number; productName: string; productId: string }[]>([]);
+  const [categories, setCategories] = useState<{ id: number; name: string }[]>([]);
+  const [productSearch, setProductSearch] = useState("");
+  const [productIds, setProductIds] = useState<number[]>(
+    Array.isArray(initial.productPromocodes)
+      ? initial.productPromocodes.map((p: any) => p.productId ?? p.product?.id).filter(Boolean)
+      : [],
+  );
+  const [categoryIds, setCategoryIds] = useState<number[]>(
+    Array.isArray(initial.subcategoryPromocodes)
+      ? [...new Set(initial.subcategoryPromocodes.map((s: any) => s.subCategory?.categoryId).filter(Boolean))]
+      : [],
+  );
+
+  useEffect(() => {
+    fetch("/api/products?limit=500").then((r) => r.json()).then((d) => setProducts(d.products ?? [])).catch(() => {});
+    fetch("/api/categories").then((r) => r.json()).then((d) => setCategories(Array.isArray(d) ? d : (d.categories ?? []))).catch(() => {});
+  }, []);
+
+  const toggleProduct = (id: number) =>
+    setProductIds((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
+  const toggleCategory = (id: number) =>
+    setCategoryIds((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
 
   const [form, setForm] = useState({
     promocode:        initial.promocode        ?? "",
@@ -76,7 +101,15 @@ export default function PromoForm({ initial = {}, mode }: Props) {
     setLoading(true); setError("");
     const url    = mode === "edit" ? `/api/promocodes/${initial.id}` : "/api/promocodes";
     const method = mode === "edit" ? "PUT" : "POST";
-    const res    = await fetch(url, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(form) });
+    const res    = await fetch(url, {
+      method,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ...form,
+        productIds: form.isProduct ? productIds : [],
+        categoryIds: form.isSubcategory ? categoryIds : [],
+      }),
+    });
     const data   = await res.json();
     setLoading(false);
     if (!res.ok) { setError(data.error ?? "Something went wrong"); return; }
@@ -207,9 +240,9 @@ export default function PromoForm({ initial = {}, mode }: Props) {
           <h2 className="font-semibold text-gray-900 text-sm mb-4">Promo Code Scope</h2>
           <div className="grid grid-cols-3 gap-4">
             {[
-              { name: "isFirstOrder",  label: "First Order Only",     desc: "Only for customer's first order" },
-              { name: "isProduct",     label: "Product Specific",     desc: "Applies to selected products" },
-              { name: "isSubcategory", label: "Subcategory Specific", desc: "Applies to selected subcategories" },
+              { name: "isFirstOrder",  label: "First Order Only", desc: "Only for customer's first order" },
+              { name: "isProduct",     label: "Product Specific", desc: "Applies to selected products" },
+              { name: "isSubcategory", label: "Category Specific", desc: "Applies to selected categories" },
             ].map((f) => (
               <label key={f.name} className={`flex flex-col gap-1 p-4 border-2 rounded-xl cursor-pointer transition-all ${
                 (form as any)[f.name] ? "border-brand-400 bg-brand-50" : "border-gray-200 hover:border-gray-300"
@@ -222,6 +255,64 @@ export default function PromoForm({ initial = {}, mode }: Props) {
               </label>
             ))}
           </div>
+
+          {/* Product picker — shown when "Product Specific" is ticked */}
+          {form.isProduct && (
+            <div className="mt-4 border-t border-gray-100 pt-4">
+              <p className="text-sm font-semibold text-gray-700 mb-2">
+                Choose products <span className="text-gray-400 font-normal">({productIds.length} selected)</span>
+              </p>
+              <input
+                value={productSearch}
+                onChange={(e) => setProductSearch(e.target.value)}
+                placeholder="Search products by name or SKU..."
+                className={inputClass()}
+              />
+              <div className="mt-2 max-h-56 overflow-y-auto rounded-xl border border-gray-100 divide-y divide-gray-50">
+                {products
+                  .filter((p) => {
+                    const q = productSearch.trim().toLowerCase();
+                    return !q || p.productName.toLowerCase().includes(q) || (p.productId ?? "").toLowerCase().includes(q);
+                  })
+                  .slice(0, 100)
+                  .map((p) => (
+                    <label key={p.id} className="flex items-center gap-2.5 px-3 py-2 cursor-pointer hover:bg-gray-50">
+                      <input type="checkbox" checked={productIds.includes(p.id)} onChange={() => toggleProduct(p.id)} className="w-4 h-4 accent-brand-600" />
+                      <span className="text-sm text-gray-800">{p.productName}</span>
+                      <span className="ml-auto text-xs text-gray-400">{p.productId}</span>
+                    </label>
+                  ))}
+                {products.length === 0 && <p className="px-3 py-3 text-sm text-gray-400">Loading products…</p>}
+              </div>
+            </div>
+          )}
+
+          {/* Category picker — shown when "Category Specific" is ticked */}
+          {form.isSubcategory && (
+            <div className="mt-4 border-t border-gray-100 pt-4">
+              <p className="text-sm font-semibold text-gray-700 mb-2">
+                Choose categories <span className="text-gray-400 font-normal">({categoryIds.length} selected)</span>
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {categories.map((c) => {
+                  const on = categoryIds.includes(c.id);
+                  return (
+                    <button
+                      key={c.id}
+                      type="button"
+                      onClick={() => toggleCategory(c.id)}
+                      className={`px-3 py-1.5 rounded-lg border text-sm transition-colors ${
+                        on ? "border-brand-600 bg-brand-50 text-brand-700 font-medium" : "border-gray-200 text-gray-600 hover:bg-gray-50"
+                      }`}
+                    >
+                      {c.name}
+                    </button>
+                  );
+                })}
+                {categories.length === 0 && <p className="text-sm text-gray-400">Loading categories…</p>}
+              </div>
+            </div>
+          )}
         </div>
 
         <button type="submit" disabled={loading}

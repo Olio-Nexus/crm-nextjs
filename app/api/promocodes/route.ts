@@ -42,11 +42,24 @@ export async function POST(req: NextRequest) {
       discountType, discount, maximumCap, minimumOrderValue,
       startDate, expiryDate, useTime,
       isFirstOrder, isProduct, isSubcategory,
-      status, productIds, subCategoryIds,
+      status, productIds, categoryIds,
     } = body;
 
     if (!promocode || !shortDescription || !discountType || !discount || !startDate || !expiryDate) {
       return NextResponse.json({ error: "Required fields missing" }, { status: 400 });
+    }
+
+    // Product scope → product ids; category scope → the categories' subcategories
+    // (categories map 1:1 to auto-managed subcategories in this CRM).
+    const prodIds: number[] =
+      isProduct && Array.isArray(productIds) ? productIds.map((p: any) => Number(p)).filter(Boolean) : [];
+    let subCategoryIds: number[] = [];
+    if (isSubcategory && Array.isArray(categoryIds) && categoryIds.length) {
+      const subs = await prisma.subCategory.findMany({
+        where: { categoryId: { in: categoryIds.map((c: any) => Number(c)).filter(Boolean) } },
+        select: { id: true },
+      });
+      subCategoryIds = subs.map((s) => s.id);
     }
 
     const created = await prisma.promocode.create({
@@ -66,11 +79,11 @@ export async function POST(req: NextRequest) {
         isProduct:     isProduct    ?? false,
         isSubcategory: isSubcategory ?? false,
         status:        status ?? false,
-        productPromocodes: productIds?.length ? {
-          create: productIds.map((pid: number) => ({ productId: pid })),
+        productPromocodes: prodIds.length ? {
+          create: prodIds.map((pid) => ({ productId: pid })),
         } : undefined,
-        subcategoryPromocodes: subCategoryIds?.length ? {
-          create: subCategoryIds.map((sid: number) => ({ subCategoryId: sid })),
+        subcategoryPromocodes: subCategoryIds.length ? {
+          create: subCategoryIds.map((sid) => ({ subCategoryId: sid })),
         } : undefined,
       },
     });

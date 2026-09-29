@@ -1,5 +1,12 @@
 import { prisma } from "@/lib/prisma";
-import type { Promocode } from "@prisma/client";
+import { OrderStatus, type Promocode } from "@prisma/client";
+
+/** Cart/customer context for enforcing scope + first-order rules. */
+export interface PromoContext {
+  productIds?: number[];
+  subcategoryIds?: number[];
+  customerId?: number;
+}
 
 export interface PromoResult {
   valid: boolean;
@@ -22,6 +29,7 @@ export interface PromoResult {
 export async function resolvePromo(
   code: string,
   subtotal: number,
+  ctx?: PromoContext,
 ): Promise<PromoResult> {
   const trimmed = String(code ?? "").trim();
   if (!trimmed) {
@@ -30,6 +38,10 @@ export async function resolvePromo(
 
   const promo = await prisma.promocode.findFirst({
     where: { promocode: { equals: trimmed, mode: "insensitive" }, status: true },
+    include: {
+      productPromocodes: { select: { productId: true } },
+      subcategoryPromocodes: { select: { subCategoryId: true } },
+    },
   });
   if (!promo) {
     return { valid: false, discount: 0, message: "This coupon code isn't valid." };
@@ -52,6 +64,37 @@ export async function resolvePromo(
       discount: 0,
       message: `Add ₹${Math.ceil(promo.minimumOrderValue - subtotal)} more to use this coupon (minimum order ₹${promo.minimumOrderValue.toFixed(0)}).`,
     };
+  }
+
+  // Scope — product / category-specific coupons only apply when the cart matches.
+  if (promo.isProduct && promo.productPromocodes.length > 0) {
+    const ids = promo.productPromocodes.map((p) => p.productId);
+    if (!(ctx?.productIds ?? []).some((id) => ids.includes(id))) {
+      return {
+        valid: false,
+        discount: 0,
+        message: "This coupon applies only to specific products, which aren't in your cart.",
+      };
+    }
+  }
+  if (promo.isSubcategory && promo.subcategoryPromocodes.length > 0) {
+    const ids = promo.subcategoryPromocodes.map((s) => s.subCategoryId);
+    if (!(ctx?.subcategoryIds ?? []).some((id) => ids.includes(id))) {
+      return {
+        valid: false,
+        discount: 0,
+        message: "This coupon applies only to selected categories, which aren't in your cart.",
+      };
+    }
+  }
+  // First-order-only — reject once this customer already has a placed order.
+  if (promo.isFirstOrder && ctx?.customerId) {
+    const prior = await prisma.orderMaster.count({
+      where: { customerId: ctx.customerId, orderStatus: { not: OrderStatus.PAYMENT_PENDING } },
+    });
+    if (prior > 0) {
+      return { valid: false, discount: 0, message: "This coupon is valid only on your first order." };
+    }
   }
 
   let discount = 0;
