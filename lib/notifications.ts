@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { sendMail } from "@/lib/mailer";
+import { wrapEmail } from "@/lib/email-layout";
 
 /** Replace {{var}} placeholders with values (missing → empty string). */
 export function renderTemplate(
@@ -306,9 +307,16 @@ export async function sendOccasionReminders() {
     };
     const subject = renderTemplate(template.subject, vars);
     const text = renderTemplate(template.emailBody, vars);
+    // Wrap the (client-editable) template body in the branded shell — logo + Contact us.
+    const html = wrapEmail(
+      `<p style="margin:0;color:#4b5563;font-size:14px;line-height:1.7">${String(text)
+        .replace(/</g, "&lt;")
+        .replace(/\n/g, "<br />")}</p>`,
+      subject,
+    );
 
     try {
-      const { delivered } = await sendMail({ to: o.email, subject, text });
+      const { delivered } = await sendMail({ to: o.email, subject, text, html });
       await prisma.notificationLog.create({
         data: {
           event: "OCCASION_REMINDER",
