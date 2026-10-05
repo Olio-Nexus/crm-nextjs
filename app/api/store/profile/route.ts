@@ -51,7 +51,6 @@ const dateStr = z
 
 const schema = z.object({
   name: z.string().min(1).optional(),
-  mobileNumber: z.string().optional(),
   company: z.string().optional(),
   gender: z.string().optional(),
   dob: dateStr,
@@ -80,7 +79,7 @@ export async function PATCH(req: NextRequest) {
       where: { id: customer.id },
       data: {
         ...(d.name != null ? { name: d.name } : {}),
-        ...(d.mobileNumber != null ? { mobileNumber: d.mobileNumber } : {}),
+        // Phone (mobileNumber) is set only via the verified link flow, not here.
         ...(d.company != null ? { company: d.company } : {}),
         ...(d.gender != null ? { gender: d.gender } : {}),
         ...(d.dob !== undefined ? { dob: d.dob ? new Date(d.dob) : null } : {}),
@@ -97,7 +96,7 @@ export async function PATCH(req: NextRequest) {
       });
       const base = {
         name: d.name ?? customer.name,
-        phoneNumber: d.mobileNumber ?? customer.mobileNumber ?? "",
+        phoneNumber: customer.mobileNumber ?? "",
         streetAddress: d.address.streetAddress,
         city: d.address.city,
         state: d.address.state,
